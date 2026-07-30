@@ -1,0 +1,35 @@
+{
+  "app_name": {
+    "message": "Bridge Translator"
+  },
+  "app_description": {
+    "message": "バイリンガルブリッジ翻訳拡張機能 - 言語をシームレスに接続"
+  },
+  "translate_selection": {
+    "message": "「%s」を翻訳"
+  },
+  "toggle_translate": {
+    "message": "翻訳の切り替え"
+  },
+  "toggle_translate_only": {
+    "message": "訳文のみ表示"
+  },
+  "toggle_style": {
+    "message": "スタイル切り替え"
+  },
+  "open_options": {
+    "message": "設定を開く"
+  },
+  "open_tranbox": {
+    "message": "ポップアップを開く"
+  },
+  "open_separate_window": {
+    "message": "独立ウィンドウで開く"
+  },
+  "toggle_tranbox": {
+    "message": "翻訳ボックスを切り替え"
+  },
+  "command_summarize_page": {
+    "message": "ページを要約"
+  }
+}

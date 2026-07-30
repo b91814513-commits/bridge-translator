@@ -1,0 +1,35 @@
+{
+  "app_name": {
+    "message": "Bridge Translator"
+  },
+  "app_description": {
+    "message": "一个双语桥接翻译扩展 - 无缝连接不同语言"
+  },
+  "translate_selection": {
+    "message": "翻译 \"%s\""
+  },
+  "toggle_translate": {
+    "message": "开启翻译"
+  },
+  "toggle_translate_only": {
+    "message": "仅看译文"
+  },
+  "toggle_style": {
+    "message": "切换样式"
+  },
+  "open_options": {
+    "message": "打开设置"
+  },
+  "open_tranbox": {
+    "message": "打开弹窗"
+  },
+  "open_separate_window": {
+    "message": "打开独立窗口"
+  },
+  "toggle_tranbox": {
+    "message": "切换划词翻译"
+  },
+  "command_summarize_page": {
+    "message": "总结网页"
+  }
+}

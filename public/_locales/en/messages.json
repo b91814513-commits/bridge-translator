@@ -1,0 +1,35 @@
+{
+  "app_name": {
+    "message": "Bridge Translator"
+  },
+  "app_description": {
+    "message": "A bilingual bridge translation extension - connect languages seamlessly"
+  },
+  "translate_selection": {
+    "message": "Translate \"%s\""
+  },
+  "toggle_translate": {
+    "message": "Toggle Translation"
+  },
+  "toggle_translate_only": {
+    "message": "Show translation only"
+  },
+  "toggle_style": {
+    "message": "Toggle Styles"
+  },
+  "open_options": {
+    "message": "Open Setting"
+  },
+  "open_tranbox": {
+    "message": "Open Popup Box"
+  },
+  "open_separate_window": {
+    "message": "Open Independent Window"
+  },
+  "toggle_tranbox": {
+    "message": "Toggle Translation Box"
+  },
+  "command_summarize_page": {
+    "message": "Summarize Page"
+  }
+}
