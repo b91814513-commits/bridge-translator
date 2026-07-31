@@ -1,9 +1,10 @@
 name: publish release version
 
 on:
-  push:
-    tags:
-      - "v*"
+  # 发布改为手动触发：继承自上游的自动发布流水线（CI=true build+zip 遇告警即失败、
+  # GitHub Pages 部署需额外权限、产物命名为 kiss-translator_*）在本项目中存在失败与不一致风险。
+  # v1.0.0 起采用手动 gh release 发布；后续硬化该流水线后可恢复 push tag 自动发布。
+  workflow_dispatch:
 
 jobs:
   build:

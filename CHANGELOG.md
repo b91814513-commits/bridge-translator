@@ -1,7 +1,24 @@
 ## v1.0.0
 
-- 项目更名为 **Bridge Translator**，版本号重置为 1.0.0，作为本项目的首个版本。
-- 本项目基于 [KISS Translator](https://github.com/fishjar/kiss-translator) v2.0.28 派生而来，以下 `v2.x` 及更早条目均为上游 KISS Translator 的历史更新记录，保留以供参考。
+首个正式版本。本项目基于 [KISS Translator](https://github.com/fishjar/kiss-translator) v2.0.28 二次开发，在完整继承其翻译能力的基础上，新增与优化如下：
+
+### ✨ 新增功能
+
+- **AI 网页总结**：一键提取网页正文，由 AI 生成结构化中文总结（核心概述 + 要点 + 详细说明），在 Shadow DOM 弹窗中以 Markdown 渲染，默认快捷键 `Alt+W`。
+- **YouTube 视频总结**：侧边栏新增「视频总结」Tab，基于带时间戳的双语字幕生成「主要观点 + 分段详情」。
+
+### 🔧 增强与优化
+
+- 字幕体验：侧边栏整合「双语字幕 / 生词本 / 视频总结」，支持导出 VTT / 源数据 JSON，并在字幕未被拦截时主动拉取兜底。
+- 界面：全新浅粉色主题，统一「Bridge Translator」品牌与粉色桥梁图标。
+- 同步与备份：上传 / 下载分离，新增本地配置导入导出（不含 API 密钥等敏感信息），精简为 WebDAV / GitHub Gist。
+
+### 🛡️ 稳定性修复
+
+- 修复 MV3 Service Worker 下 AI 流式请求挂起（保活 + 前台保底超时 + 空闲超时），解决字幕翻译无限加载与网页总结「Failed to fetch」。
+- 页面级注入 UI 全部 Shadow DOM 隔离，杜绝主题样式泄漏到宿主页面。
+
+> 版本号重置为 1.0.0。以下 `v2.x` 及更早条目为上游 KISS Translator 的历史更新记录，保留以供参考。
 
 ---
 
