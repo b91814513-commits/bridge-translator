@@ -5,7 +5,6 @@
   "version": "1.0.0",
   "default_locale": "en",
   "author": "Bridge Translator Team",
-  "homepage_url": "https://github.com/user/bridge-translator",
   "background": {
     "service_worker": "background.js",
     "type": "module"

@@ -42,10 +42,12 @@
     "build:userscript-ios": "zx src/scripts/build-ios.mjs",
     "build:rules": "babel-node src/rules.js",
     "format": "prettier --write \"**/*.{js,json,html}\"",
+    "format:check": "prettier --check \"**/*.{js,json,html}\"",
     "build": "pnpm sync-version && pnpm format && pnpm build:chrome && pnpm build:edge && pnpm build:thunderbird && pnpm build:firefox && pnpm build:web && pnpm build:userscript-ios && pnpm build:rules",
     "zip": "zx src/scripts/archive.mjs",
     "build+zip": "cross-env CI=true pnpm build && pnpm zip",
     "test": "react-app-rewired test",
+    "test:ci": "cross-env CI=true react-app-rewired test --watchAll=false",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
