@@ -18,6 +18,7 @@ jobs:
           node-version: 24
           cache: "pnpm"
       - run: pnpm install
+      - run: pnpm test:ci
       - run: pnpm build+zip
       - uses: actions/upload-artifact@v4
         with:
