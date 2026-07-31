@@ -10,11 +10,15 @@ import { isBg } from "./browser";
 import { PORT_STREAM_FETCH } from "../config";
 import { createSSEParser, createAsyncQueue } from "./stream";
 import {
-  createTimeoutSignal,
+  createIdleTimeoutController,
   mergeAbortSignals,
   normalizeHttpTimeout,
   resolveHttpTimeout,
 } from "./request";
+
+// 流式空闲超时下限：AI 大 prompt 首 token 可能思考数十秒，空闲阈值不得低于此值，
+// 避免把"正在思考"误判为"卡死"。实际阈值取 max(httpTimeout, 下限)。
+export const STREAM_IDLE_TIMEOUT_FLOOR_MS = 60 * 1000;
 
 /**
  * 油猴环境下的 SSE 流式请求。
@@ -209,14 +213,22 @@ async function* fetchStreamGM(
 export async function* fetchStreamNative(input, init = {}, opts = {}) {
   const options = typeof opts === "number" ? { httpTimeout: opts } : opts || {};
   const timeout = normalizeHttpTimeout(options.httpTimeout);
-  const signal = mergeAbortSignals([
-    init.signal,
-    options.signal,
-    createTimeoutSignal(timeout),
-  ]);
-  const response = await fetch(input, { ...init, signal });
+  // 将固定总超时改为空闲超时：只要持续有 SSE 数据到达就不中断，
+  // 避免大字幕流式 AI 断句（数千条）被 30 秒总超时误杀。
+  const idleMs = Math.max(timeout, STREAM_IDLE_TIMEOUT_FLOOR_MS);
+  const idle = createIdleTimeoutController(idleMs);
+  const signal = mergeAbortSignals([init.signal, options.signal, idle.signal]);
+
+  let response;
+  try {
+    response = await fetch(input, { ...init, signal });
+  } catch (e) {
+    idle.clear();
+    throw e;
+  }
 
   if (!response.ok) {
+    idle.clear();
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
@@ -229,11 +241,14 @@ export async function* fetchStreamNative(input, init = {}, opts = {}) {
       const { done, value } = await reader.read();
       if (done) break;
 
+      // 每收到一块数据就重置空闲计时，保证正常流式不会因耗时较长而被中断。
+      idle.bump();
       for (const data of parseSSE(decoder.decode(value, { stream: true }))) {
         yield data;
       }
     }
   } finally {
+    idle.clear();
     // 当调用方提前结束 async generator 时，主动释放 reader 锁并推动底层连接关闭。
     await reader.cancel?.();
   }

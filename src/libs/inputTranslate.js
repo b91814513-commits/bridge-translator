@@ -13,6 +13,7 @@ import { stepShortcutRegister } from "./shortcut";
 import { apiTranslate } from "../apis";
 import { createLoadingSVG } from "./svg";
 import { FAVICON_BASE64 } from "../components/Logo/icon.base64.js";
+import { isContextInvalidatedError } from "./browser";
 import { logger } from "./log";
 
 // ==========================================
@@ -616,7 +617,14 @@ export class InputTranslator {
         logger.warn("Text replacement failed after all strategies.");
       }
     } catch (err) {
-      logger.error("Translate input error:", err);
+      // 扩展重载/更新后孤儿 content script 无法再与后台通信，默认级别下静默（不引入控制台警告）
+      if (isContextInvalidatedError(err)) {
+        logger.debug(
+          "Extension was reloaded or updated. Please refresh the page to restore input translation."
+        );
+      } else {
+        logger.error("Translate input error:", err);
+      }
     } finally {
       removeLoading(loadingId);
       // 恢复显示按钮

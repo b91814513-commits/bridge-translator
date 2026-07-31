@@ -1631,12 +1631,15 @@ export default function Apis() {
           {i18n("about_api_2")}
           <br />
           {i18n("about_api_3")}
-          <Link
-            href="https://github.com/user/bridge-translator/blob/master/custom-api_v2.md"
-            target="_blank"
-          >
-            {i18n("goto_custom_api_example")}
-          </Link>
+          {/* 未配置项目主页时隐藏在线文档链接 */}
+          {process.env.REACT_APP_HOMEPAGE && (
+            <Link
+              href={`${process.env.REACT_APP_HOMEPAGE}/blob/master/custom-api_v2.md`}
+              target="_blank"
+            >
+              {i18n("goto_custom_api_example")}
+            </Link>
+          )}
         </Alert>
 
         <Box>

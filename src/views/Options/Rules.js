@@ -1170,7 +1170,10 @@ function UserRules({ subRules, rules }) {
           {i18n("clear_all")}
         </Button>
 
-        <HelpButton url={URL_KISS_RULES_NEW_ISSUE} />
+        {/* 未配置规则反馈仓库地址时隐藏帮助入口 */}
+        {URL_KISS_RULES_NEW_ISSUE && (
+          <HelpButton url={URL_KISS_RULES_NEW_ISSUE} />
+        )}
 
         <FormControlLabel
           control={
@@ -1407,7 +1410,10 @@ function SubRulesEdit({ subList, addSub, updateDataCache }) {
         >
           {i18n("add")}
         </Button>
-        <HelpButton url={URL_KISS_RULES_NEW_ISSUE} />
+        {/* 未配置规则反馈仓库地址时隐藏帮助入口 */}
+        {URL_KISS_RULES_NEW_ISSUE && (
+          <HelpButton url={URL_KISS_RULES_NEW_ISSUE} />
+        )}
       </Stack>
 
       {showInput && (

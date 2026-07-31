@@ -86,7 +86,7 @@ const extWebpack = (config, env) => {
 const userscriptWebpack = (config, env) => {
   // 定义油猴脚本特有的 Meta 元数据头部信息 banner
   // REVIEW: @connect 声明中 generativelanguage.googleapis.com 出现了两次，建议删除一行冗余配置。
-  const banner = `// ==UserScript==
+  const bannerTemplate = `// ==UserScript==
 // @name          ${process.env.REACT_APP_NAME}
 // @namespace     ${process.env.REACT_APP_HOMEPAGE}
 // @version       ${process.env.REACT_APP_VERSION}
@@ -157,6 +157,12 @@ const userscriptWebpack = (config, env) => {
 // ==/UserScript==
 
 `;
+
+  // 过滤未配置发布地址导致的空值元数据行 (如 @icon/@downloadURL)，避免输出无效头部
+  const banner = bannerTemplate
+    .split("\n")
+    .filter((line) => !/^\/\/ @\w+\s*$/.test(line))
+    .join("\n");
 
   const names = ["HtmlWebpackPlugin"];
 

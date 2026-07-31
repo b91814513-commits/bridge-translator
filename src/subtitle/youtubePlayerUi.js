@@ -100,11 +100,21 @@ export class YouTubePlayerUi {
     Object.assign(kissControls.style, {
       height: "100%",
       position: "relative",
+      // 与其他原生控制按钮同行内联排列，避免块级 div 导致基线错位
+      display: "inline-flex",
+      alignItems: "center",
+      verticalAlign: "top",
     });
 
     const toggleButton = document.createElement("button");
     toggleButton.className = "ytp-button kiss-subtitle-button";
     toggleButton.title = APP_NAME;
+    // 用 flex 居中图标：logo 是 <img>，默认行内基线对齐会比相邻原生图标偏低
+    Object.assign(toggleButton.style, {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+    });
 
     toggleButton.appendChild(createLogoSVG());
     kissControls.appendChild(toggleButton);

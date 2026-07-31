@@ -309,7 +309,9 @@ export function Menus({
       style={{
         position: "absolute",
         left: 0,
-        bottom: 100,
+        // 紧贴控制栏上方弹出（100% 即控制栏高度），避免硬编码像素导致
+        // 在 Shorts 等非常规播放器布局下菜单悬空、与页面元素错位重叠
+        bottom: "calc(100% + 12px)",
         background: "rgba(0,0,0,.6)",
         width: 250,
         lineHeight: "40px",

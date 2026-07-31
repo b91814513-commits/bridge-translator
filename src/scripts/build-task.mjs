@@ -26,6 +26,36 @@ const inDest = (file) => path.join(targetDir, file);
 
 console.log(chalk.blue(`\n🚀 Starting build task for: ${chalk.bold(target)}`));
 
+// 断言：构建产物中不得残留无归属的占位符端点
+// (拼接写法避免本脚本自身被占位符残留检查命中)
+const PLACEHOLDER_PATTERNS = ["user.github" + ".io", "github.com/" + "user"];
+const TEXT_FILE_RE = /\.(js|json|html|css|txt|map|xml|svg)$/i;
+
+async function assertNoPlaceholderEndpoints(dir) {
+  const offenders = [];
+  const walk = async (current) => {
+    for (const entry of await fs.readdir(current, { withFileTypes: true })) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        await walk(fullPath);
+      } else if (TEXT_FILE_RE.test(entry.name)) {
+        const content = await fs.readFile(fullPath, "utf8");
+        for (const pattern of PLACEHOLDER_PATTERNS) {
+          if (content.includes(pattern)) {
+            offenders.push(`${fullPath} -> ${pattern}`);
+          }
+        }
+      }
+    }
+  };
+  await walk(dir);
+  if (offenders.length > 0) {
+    throw new Error(
+      `Placeholder endpoints found in build output:\n${offenders.join("\n")}`
+    );
+  }
+}
+
 try {
   // 1. 【清理】 清空当前目标的构建目录
   await fs.remove(targetDir);
@@ -119,6 +149,10 @@ try {
       }
     }
   }
+
+  // 4. 【校验】 产物中不得包含占位符端点
+  await assertNoPlaceholderEndpoints(targetDir);
+  console.log(chalk.green("✅ No placeholder endpoints in build output."));
 
   console.log(
     chalk.green(`✅ Build task for [${target}] completed successfully!`)

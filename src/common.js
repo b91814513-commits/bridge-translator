@@ -18,7 +18,7 @@ import { extractPageContent, requestWebSummary } from "./libs/webSummary";
 import { showSummaryPopup, hideSummaryPopup } from "./views/Summary";
 import { BRIDGE_SUMMARIZE_TRIGGER } from "./config/msg";
 import { newI18n } from "./config/i18n";
-import { browser } from "./libs/browser";
+import { browser, isContextInvalidatedError } from "./libs/browser";
 
 /**
  * 油猴脚本特权桥接设置。
@@ -90,6 +90,9 @@ function ensureUserscriptGM() {
  * @param {string} message 错误内容信息
  */
 function showErr(message) {
+  // body 尚未就绪时（早期注入、特殊页面）直接跳过，避免 appendChild 抛出新的空引用异常
+  if (!document.body) return;
+
   const bannerId = "Bridge-Translator-Message";
   const existingBanner = document.getElementById(bannerId);
   if (existingBanner) {
@@ -294,12 +297,60 @@ function setupSummaryListener(setting) {
 }
 
 /**
+ * 注册扩展上下文失效的全局兜底处理。
+ * 扩展被重载/更新后，旧页面中残留的孤儿 content script 的所有 runtime/storage 调用
+ * 都会抛出 "Extension context invalidated"，其中未被业务层捕获的会污染控制台。
+ * 这里统一拦截此类未捕获异常，并向用户展示一次性的刷新页面提示 Banner。
+ * @param {Function} [onInvalidated] 首次检测到上下文失效时回调一次（用于停止翻译器等清理）
+ */
+function setupContextInvalidatedGuard(onInvalidated) {
+  let notified = false;
+
+  window.addEventListener("unhandledrejection", (event) => {
+    if (!isContextInvalidatedError(event.reason)) return;
+
+    // 阻止默认的 "Uncaught (in promise)" 控制台报错
+    event.preventDefault();
+
+    if (notified) return;
+    notified = true;
+
+    // 默认 INFO 日志级别下 debug 静默，不向控制台引入警告
+    logger.debug(
+      "Extension context invalidated (extension was reloaded or updated). Please refresh the page."
+    );
+
+    // 失效后主动停止翻译器，避免 IntersectionObserver 继续发起注定失败的请求
+    try {
+      onInvalidated?.();
+    } catch (err) {
+      logger.debug("onInvalidated cleanup failed:", err);
+    }
+
+    // 仅顶层 frame 展示 Banner；iframe 中仅静默拦截，避免多个 iframe 各自弹提示
+    if (!isIframe) {
+      showErr(
+        "扩展已更新，请刷新页面以恢复翻译功能 (Extension updated, please refresh the page)"
+      );
+    }
+  });
+}
+
+/**
  * 前端翻译器的核心运行总入口。
  * @param {boolean} isUserscript 是否作为油猴 Userscript 脚本模式运行 (false 代表作为浏览器 Extension 运行)
  */
 export async function run(isUserscript = false) {
+  // 上下文失效时用于停止翻译器的引用；guard 注册在前、manager 创建在后，回调经引用延迟解析
+  let managerRef = null;
+
   try {
     const href = document?.location?.href || "";
+
+    // 扩展模式下优先挂载上下文失效兜底，覆盖后续所有异步调用链
+    if (!isUserscript) {
+      setupContextInvalidatedGuard(() => managerRef?.stop());
+    }
 
     if (isUserscript) {
       ensureUserscriptGM();
@@ -371,6 +422,8 @@ export async function run(isUserscript = false) {
       isUserscript,
       transboxOnly: isPdfDocument,
     });
+    // 暴露给上下文失效兜底，失效时停止翻译器（含 IntersectionObserver、监听器等）
+    managerRef = translatorManager;
     translatorManager.start();
 
     // 9. 若当前页面是嵌套的 iframe，不进行视频字幕翻译，避免多个 iframe 里重复跑字幕服务造成冲突

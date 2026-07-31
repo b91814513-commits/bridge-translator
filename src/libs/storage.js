@@ -316,10 +316,13 @@ export const tryInitDefaultData = async (uiLang) => {
     await trySetObj(STOKEY_SETTING, { ...DEFAULT_SETTING, uiLang });
     await trySetObj(STOKEY_RULES, DEFAULT_RULES);
     await trySetObj(STOKEY_SYNC, DEFAULT_SYNC);
-    await trySetObj(
-      `${STOKEY_RULESCACHE_PREFIX}${process.env.REACT_APP_RULESURL}`,
-      BUILTIN_RULES
-    );
+    // 仅在配置了默认订阅地址时预植内置规则缓存，避免空地址产生无效缓存键
+    if (process.env.REACT_APP_RULESURL) {
+      await trySetObj(
+        `${STOKEY_RULESCACHE_PREFIX}${process.env.REACT_APP_RULESURL}`,
+        BUILTIN_RULES
+      );
+    }
   } catch (err) {
     kissLog("init default", err);
   }

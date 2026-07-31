@@ -35,7 +35,7 @@ import { trustedTypesHelper } from "./trustedTypes";
 import { injectJs, INJECTOR } from "../injectors";
 import { injectInternalCss } from "./injector";
 import { isExt } from "./client";
-import { sendBgMsg } from "./msg";
+import { sendBgMsgSafe } from "./msg";
 import { getDocInfo } from "./docInfo";
 
 /**
@@ -3106,7 +3106,7 @@ overflow-wrap: anywhere !important;`;
       const { injectJs, injectCss, toLang } = this.#rule;
 
       if (isExt) {
-        injectCss && sendBgMsg(MSG_INJECT_CSS, injectCss);
+        injectCss && sendBgMsgSafe(MSG_INJECT_CSS, injectCss);
       } else {
         injectCss && injectInternalCss(injectCss);
       }
@@ -3168,7 +3168,7 @@ overflow-wrap: anywhere !important;`;
       this.#translateTitle();
     }
 
-    isExt && sendBgMsg(MSG_UPDATE_ICON, true);
+    isExt && sendBgMsgSafe(MSG_UPDATE_ICON, true);
   }
 
   // 翻译页面标题
@@ -3202,7 +3202,7 @@ overflow-wrap: anywhere !important;`;
       document.title = this.#docInfo.title;
     }
 
-    isExt && sendBgMsg(MSG_UPDATE_ICON, false);
+    isExt && sendBgMsgSafe(MSG_UPDATE_ICON, false);
   }
 
   // 重新扫描页面

@@ -56,7 +56,7 @@ const baseContent = {
       {
         name: "Thunderbird",
         meta: "Release package",
-        href: "https://github.com/user/bridge-translator/releases",
+        href: process.env.REACT_APP_RELEASES_URL,
       },
       {
         name: "Userscript",
@@ -68,7 +68,8 @@ const baseContent = {
         meta: "Userscripts Safari",
         href: process.env.REACT_APP_USERSCRIPT_IOS_DOWNLOADURL,
       },
-    ],
+      // 未配置发布地址的入口直接隐藏，避免展示无效下载链接
+    ].filter(({ href }) => Boolean(href)),
     features: [
       {
         title: "Webpage bilingual translation",

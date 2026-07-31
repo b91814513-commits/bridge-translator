@@ -19,7 +19,7 @@ import {
   isSameLang,
   selectProactiveCaptionTrack,
 } from "./youtubeCaptionTracks.js";
-import { eventsToSubtitles } from "./youtubeAiSegmentation.js";
+import { eventsToSubtitles, resolveSegSlugByTrackKind } from "./youtubeAiSegmentation.js";
 import {
   builtinSegment,
   formatSubtitles,
@@ -66,6 +66,10 @@ class YouTubeCaptionProvider {
   #processingVersion = 0;
   // 当前已成功激活并运行的字幕轨唯一标识 Key
   #activeTrackKey = null;
+  // 当前字幕轨类型："asr"=平台自动生成；"standard" 等显式值=人工字幕；null 严格表示"轨道尚未确定"
+  #activeTrackKind = null;
+  // 当前视频内用户手动选择的 AI 断句服务；null 表示走按字幕轨类型的智能默认，切换视频后重置
+  #segSlugOverride = null;
   // AI 断句后续 chunk 的按需调度器；为 null 表示当前使用内置断句或尚未生成后续 chunk。
   #aiChunkScheduler = null;
   // 当前字幕断句/分块处理的取消控制器，用于视频或字幕轨切换时中止旧流式请求
@@ -176,6 +180,8 @@ class YouTubeCaptionProvider {
       this.#processingId = null;
       this.#processingVersion += 1;
       this.#activeTrackKey = null;
+      this.#activeTrackKind = null;
+      this.#segSlugOverride = null;
       this.#aiChunkScheduler = null;
       this.#subtitleAbortController?.abort();
       this.#subtitleAbortController = null;
@@ -334,6 +340,21 @@ class YouTubeCaptionProvider {
    * @returns {void}
    */
   updateSetting({ name, value }) {
+    // segSlug：菜单选择只作为当前视频内的覆盖值，不写回 #setting.segSlug，
+    // 保证切换视频后恢复按字幕轨类型的智能默认（不记忆上次选择）。
+    if (name === "segSlug") {
+      if (this.#effectiveSegSlug() === value) return;
+
+      logger.debug(
+        "Youtube Provider: override segSlug for current video",
+        value
+      );
+      this.#segSlugOverride = value;
+      this.#playerUi.updateMenuProps();
+      this.#reProcessEvents();
+      return;
+    }
+
     if (this.#setting[name] === value) return;
 
     logger.debug("Youtube Provider: update setting", name, value);
@@ -347,7 +368,7 @@ class YouTubeCaptionProvider {
       name === "displayOrder"
     ) {
       this.#managerInstance?.updateSetting({ [name]: value });
-    } else if (name === "segSlug" || name === "forceSubtitleRetranslate") {
+    } else if (name === "forceSubtitleRetranslate") {
       this.#reProcessEvents();
     } else if (name === "showOrigin") {
       this.#toggleShowOrigin();
@@ -412,7 +433,6 @@ class YouTubeCaptionProvider {
   #getMenuProps() {
     const {
       transApis,
-      segSlug,
       skipAd,
       isBilingual,
       blurTranslation,
@@ -426,7 +446,8 @@ class YouTubeCaptionProvider {
       transApis,
       progressed: this.#progressedNum,
       formData: {
-        segSlug,
+        // 菜单回显智能判断后的生效值：人工字幕视频显示"禁用"，asr 视频显示实际选中的接口
+        segSlug: this.#effectiveSegSlug(),
         skipAd,
         isBilingual,
         blurTranslation,
@@ -445,6 +466,23 @@ class YouTubeCaptionProvider {
    */
   #isStaleProcessing(version) {
     return version !== this.#processingVersion;
+  }
+
+  /**
+   * 计算本次实际生效的 AI 断句服务 segSlug。
+   * 由字幕轨类型（asr 自动字幕默认启用、人工字幕默认禁用）
+   * 与用户在当前视频内的手动覆盖共同决定。
+   *
+   * @private
+   * @returns {string} 生效的 segSlug；"-" 表示禁用 AI 断句。
+   */
+  #effectiveSegSlug() {
+    return resolveSegSlugByTrackKind({
+      trackKind: this.#activeTrackKind,
+      segSlugOverride: this.#segSlugOverride,
+      segSlug: this.#setting.segSlug,
+      transApis: this.#setting.transApis,
+    });
   }
 
   /**
@@ -519,6 +557,8 @@ class YouTubeCaptionProvider {
       this.#flatEvents = [];
       this.#progressed = 0;
       this.#activeTrackKey = null;
+      // 切换字幕轨重处理时同步清空旧轨道类型，避免新轨 ingest 前误用过期的智能判断
+      this.#activeTrackKind = null;
       this.#aiChunkScheduler = null;
     }
 
@@ -541,6 +581,9 @@ class YouTubeCaptionProvider {
         logger.debug("Youtube Provider: CaptionTrack not found:", videoId);
         return;
       }
+      // 以最终匹配轨为准判定字幕来源（findCaptionTrack 存在回退逻辑，URL 上的 kind 不可靠）；
+      // 无 kind 字段的轨道规范化为 "standard"（人工字幕），保证 null 仅表示"轨道尚未确定"。
+      const trackKind = captionTrack.kind || "standard";
       if (!captionTrack.baseUrl.startsWith("https")) {
         captionTrack.baseUrl = window.location.origin + captionTrack.baseUrl;
       }
@@ -565,6 +608,7 @@ class YouTubeCaptionProvider {
         events,
         fromLang,
         trackKey,
+        trackKind,
         processingVersion,
       });
     } catch (error) {
@@ -590,6 +634,7 @@ class YouTubeCaptionProvider {
    * @param {Array<object>} param0.events YouTube json3 原始字幕事件。
    * @param {string} param0.fromLang 字幕源语言代码。
    * @param {string} param0.trackKey 当前字幕轨唯一标识。
+   * @param {string|null} [param0.trackKind] 当前字幕轨类型；"asr" 为自动生成，其余显式值为人工字幕。
    * @param {number} param0.processingVersion 当前异步任务的版本号快照。
    * @returns {Promise<void>}
    */
@@ -598,6 +643,7 @@ class YouTubeCaptionProvider {
     events,
     fromLang,
     trackKey,
+    trackKind = null,
     processingVersion,
   }) {
     this.#rawSubtitleEvents = events;
@@ -628,13 +674,29 @@ class YouTubeCaptionProvider {
     this.#flatEvents = flatEvents;
     this.#fromLang = fromLang;
     this.#activeTrackKey = trackKey;
+    this.#activeTrackKind = trackKind;
     this.#docInfo = getDocInfo();
     await this.#enrichDocInfoWithAI(flatEvents, processingVersion);
     if (this.#isStaleProcessing(processingVersion)) return;
 
+    const effectiveSegSlug = this.#effectiveSegSlug();
+    if (
+      this.#segSlugOverride == null &&
+      effectiveSegSlug !== this.#setting.segSlug
+    ) {
+      // 智能判断调整了断句策略：人工字幕自动禁用 / asr 字幕自动选用可用 AI 接口
+      logger.info(
+        "Youtube Provider: [diag] segSlug resolved by track kind",
+        {
+          trackKind,
+          configured: this.#setting.segSlug,
+          effective: effectiveSegSlug,
+        }
+      );
+    }
     logger.info(
       "Youtube Provider: [diag] start processEvents",
-      { flatEvents: flatEvents.length, segSlug: this.#setting.segSlug }
+      { flatEvents: flatEvents.length, segSlug: effectiveSegSlug }
     );
     this.#processEvents({
       videoId,
@@ -747,6 +809,8 @@ class YouTubeCaptionProvider {
 
       const fromLang = getFromLang(captionTrack.languageCode);
       const trackKey = buildTrackKeyFromTrack(videoId, captionTrack);
+      // 同拦截路径：无 kind 字段的轨道规范化为 "standard"（人工字幕）
+      const trackKind = captionTrack.kind || "standard";
 
       const events = await fetchTrackSubtitleEvents(captionTrack);
       if (this.#isStaleProcessing(processingVersion)) return;
@@ -770,6 +834,7 @@ class YouTubeCaptionProvider {
         events,
         fromLang,
         trackKey,
+        trackKind,
         processingVersion,
       });
     } catch (error) {
@@ -841,13 +906,18 @@ class YouTubeCaptionProvider {
     signal,
   }) {
     try {
+      // 按字幕轨类型 + 用户覆盖解析生效的断句服务，再交给断句翻译流程
+      const effectiveSetting = {
+        ...this.#setting,
+        segSlug: this.#effectiveSegSlug(),
+      };
       const [subtitles, progressed, aiChunkScheduler] = await eventsToSubtitles(
         {
           videoId,
           events: this.#events,
           flatEvents,
           fromLang,
-          setting: this.#setting,
+          setting: effectiveSetting,
           processingVersion,
           isStaleProcessing: (version) => this.#isStaleProcessing(version),
           showNotification: (message, duration) =>

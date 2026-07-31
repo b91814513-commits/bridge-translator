@@ -606,17 +606,20 @@ export default function PopupCont({
           >
             {i18n("comment_support")}
           </Button>
-          <Button
-            variant="text"
-            onClick={() => {
-              window.open(
-                "https://github.com/user/bridge-translator#%E8%B5%9E%E8%B5%8F",
-                "_blank"
-              );
-            }}
-          >
-            {i18n("appreciate_support")}
-          </Button>
+          {/* 未配置项目主页时隐藏赞赏入口 */}
+          {process.env.REACT_APP_HOMEPAGE && (
+            <Button
+              variant="text"
+              onClick={() => {
+                window.open(
+                  `${process.env.REACT_APP_HOMEPAGE}#%E8%B5%9E%E8%B5%8F`,
+                  "_blank"
+                );
+              }}
+            >
+              {i18n("appreciate_support")}
+            </Button>
+          )}
           <Button variant="text" onClick={handleOpenSetting}>
             {i18n("setting")}
           </Button>

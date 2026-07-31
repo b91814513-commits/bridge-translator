@@ -22,6 +22,31 @@ function _browser() {
 export const browser = _browser();
 
 /**
+ * 判断当前扩展上下文是否仍然有效。
+ * 当扩展被重载/更新/卸载后，旧页面中残留的 content script 会成为"孤儿"脚本，
+ * 此时 `browser.runtime.id` 会变为 undefined，任何 runtime/storage 调用都会抛出
+ * "Extension context invalidated" 异常。
+ * @returns {boolean} 上下文有效返回 true；非扩展环境（browser 未加载）也视为 true，交由调用方自行判断
+ */
+export const isExtContextValid = () => !browser || !!browser.runtime?.id;
+
+/**
+ * 判断给定错误是否为扩展上下文失效错误。
+ * 兼容 Error 对象与字符串型 reason，覆盖 Chrome（Extension context invalidated）
+ * 与 Firefox（Message manager disconnected）两种孤儿脚本报错文案。
+ * @param {Error|string} err 待检查的错误对象或错误文本
+ * @returns {boolean}
+ */
+export const isContextInvalidatedError = (err) => {
+  const message = typeof err === "string" ? err : err?.message;
+  if (!message) return false;
+  return (
+    message.includes("Extension context invalidated") ||
+    message.includes("Message manager disconnected")
+  );
+};
+
+/**
  * 获取当前脚本在浏览器扩展中的具体执行环境上下文
  * @returns {string} 返回 "background" | "content" | "options" | "popup" | "undefined"
  *

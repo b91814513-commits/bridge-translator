@@ -1028,9 +1028,10 @@ export class YouTubeSubtitleList {
     vocabularyTab.addEventListener("click", () => switchTab("vocabulary"));
     videoSummaryTab.addEventListener("click", () => switchTab("video_summary"));
 
-    // 缺省激活字幕 Tab
+    // 缺省激活字幕 Tab（所有 Tab 都需初始化样式，否则会残留浏览器原生 button 外观）
     styleTab(subtitleTab, true);
     styleTab(vocabularyTab, false);
+    styleTab(videoSummaryTab, false);
 
     tabHeader.append(subtitleTab, vocabularyTab, videoSummaryTab, closeBtn);
     tabContentContainer.append(

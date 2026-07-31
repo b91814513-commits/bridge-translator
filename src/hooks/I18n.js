@@ -37,7 +37,8 @@ export const useI18n = () => {
 export const useI18nMd = (key) => {
   const i18n = useI18n();
   const fileName = i18n(key);
-  // 从指定的 CDN 或是仓库根路径下载对应的 md 文件
-  const url = fileName ? `${URL_RAW_PREFIX}/${fileName}` : "";
+  // 从指定的 CDN 或是仓库根路径下载对应的 md 文件 (未配置仓库前缀时禁用在线拉取)
+  const url =
+    URL_RAW_PREFIX && fileName ? `${URL_RAW_PREFIX}/${fileName}` : "";
   return useGet(url);
 };

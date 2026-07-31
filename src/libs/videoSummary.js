@@ -171,8 +171,8 @@ export function parseVideoSummaryResponse(responseText) {
       continue;
     }
 
-    // 检测新的分段标题 (### Section N: Title (Timestamp: XX:XX - XX:XX))
-    const sectionMatch = trimmedLine.match(/^###\s+(?:Section\s+\d+[:：]\s*)?(.+?)(?:\s*[\(（]Timestamp[:：]?\s*([\d:]+)\s*[-–]\s*([\d:]+)[\)）])?$/i);
+    // 检测新的分段标题 (### Section N: Title (Timestamp: XX:XX - XX:XX))，标签兼容中文“时间戳”写法
+    const sectionMatch = trimmedLine.match(/^###\s+(?:Section\s+\d+[:：]\s*)?(.+?)(?:\s*[\(（](?:Timestamp|时间戳)[:：]?\s*([\d:]+)\s*[-–]\s*([\d:]+)[\)）])?$/i);
     if (sectionMatch) {
       inMainPoints = false;
       inHighlights = false;

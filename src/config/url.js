@@ -14,11 +14,10 @@ export const URL_CACHE_DICT = `https://${APP_LCNAME}/dict`; // AI 词典结果�
 export const URL_CACHE_CONTEXT = `https://${APP_LCNAME}/context`; // 智能上下文分析结果缓存 Key
 
 // --- 外部相关的开源仓库及文档地址 ---
+// 以下仓库地址尚无本项目真实归属的仓库，留空表示禁用对应入口 (消费方需判空处理)
 export const URL_GITHUB_GIST_TOKEN =
   "https://github.com/settings/personal-access-tokens"; // GitHub Fine-grained Token 设置页
-export const URL_KISS_PROXY = "https://github.com/user/bridge-proxy"; // 翻译 API 跨域中转代理项目地址
-export const URL_KISS_RULES = "https://github.com/user/bridge-rules"; // 网页翻译适配规则项目地址
-export const URL_KISS_RULES_NEW_ISSUE =
-  "https://github.com/user/bridge-rules/issues/new"; // 反馈网页翻译规则故障的 Issue 链接
-export const URL_RAW_PREFIX =
-  "https://raw.githubusercontent.com/user/bridge-translator/master"; // 访问 GitHub 原始文件的 URL 前缀 (用于拉取最新的 README 等)
+export const URL_KISS_PROXY = ""; // 翻译 API 跨域中转代理项目地址 (未配置)
+export const URL_KISS_RULES = ""; // 网页翻译适配规则项目地址 (未配置)
+export const URL_KISS_RULES_NEW_ISSUE = ""; // 反馈网页翻译规则故障的 Issue 链接 (未配置)
+export const URL_RAW_PREFIX = ""; // 访问 GitHub 原始文件的 URL 前缀 (未配置，禁用在线 README 拉取)

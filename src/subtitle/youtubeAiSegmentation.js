@@ -1,12 +1,61 @@
 import { logger } from "../libs/log.js";
 import { randomBetween, sleep } from "../libs/utils.js";
 import { resolveApiPromptSettings } from "../config/prompt.js";
+import { API_SPE_TYPES } from "../config/api.js";
 import { splitEventsIntoChunks } from "./youtubeSubtitleProcessing.js";
 
 /**
  * YouTube 字幕 AI 分段层。
  * 负责把展平后的字幕分块提交给断句 API，并通过回调把后续分块增量交还给 provider 渲染。
  */
+
+/**
+ * 根据字幕轨来源类型智能解析本次实际生效的 AI 断句服务 segSlug。
+ *
+ * 策略（仅 asr 自动字幕需要 AI 重组断句，人工字幕已有语义断句与标点）：
+ * 1. 用户在当前视频内手动选择过断句服务时，无条件以用户选择为准。
+ * 2. 轨道尚未确定（trackKind 为 null）时保持用户配置的 segSlug 不变。
+ * 3. asr 自动生成字幕：未配置断句服务时自动选用首个已启用的 AI 接口。
+ * 4. 其余显式 kind（standard/forced 及未来新增值，均为人工制作字幕）一律禁用 AI 断句。
+ *
+ * 注："无 kind 字段 = 人工字幕" 是 YouTube Web 端的经验规律而非官方 API 契约，
+ * 调用方应在捕获点将无 kind 字段的轨道规范化为 "standard"，保证 null 仅表示"未确定"。
+ *
+ * @param {object} param0 参数对象。
+ * @param {string|null} param0.trackKind 当前字幕轨类型；"asr" 为自动生成，null 表示轨道尚未确定。
+ * @param {string|null} param0.segSlugOverride 用户在当前视频内手动选择的 segSlug；null 表示走智能默认。
+ * @param {string} param0.segSlug 用户配置的 AI 断句服务 slug（"-" 表示未配置）。
+ * @param {Array<object>} param0.transApis 当前可用的翻译接口配置列表。
+ * @returns {string} 本次实际生效的 segSlug；"-" 表示禁用 AI 断句。
+ */
+export function resolveSegSlugByTrackKind({
+  trackKind,
+  segSlugOverride,
+  segSlug,
+  transApis,
+}) {
+  if (segSlugOverride != null) {
+    return segSlugOverride;
+  }
+
+  if (trackKind == null) {
+    return segSlug;
+  }
+
+  if (trackKind === "asr") {
+    if (segSlug && segSlug !== "-") {
+      return segSlug;
+    }
+    // 自动字幕碎片化且缺标点，未配置断句服务时默认选用首个已启用的 AI 接口
+    const firstAiApi = (transApis || []).find(
+      (api) => !api.isDisabled && API_SPE_TYPES.ai.has(api.apiType)
+    );
+    return firstAiApi?.apiSlug || "-";
+  }
+
+  // 显式非 asr kind：人工制作字幕已有断句标点，AI 重组反而可能破坏原有结构
+  return "-";
+}
 
 /**
  * 提取相邻字幕分块的简短上下文，辅助 AI 断句保持语义连续。
@@ -262,7 +311,8 @@ export async function eventsToSubtitles({
     setting.forceSubtitleRetranslate &&
     segApiSetting?.apiSlug !== setting.apiSlug;
 
-  // 断句策略仅由用户配置的 segSlug 决定；kind 只负责定位用户实际选择的字幕轨道。
+  // 断句策略由字幕轨类型 + 用户覆盖共同决定：provider 已通过 resolveSegSlugByTrackKind
+  // 把智能判断后的生效值写入 setting.segSlug（asr 自动字幕默认启用，人工字幕默认禁用）。
   if (useAiSegmentation) {
     if (isStaleProcessing(processingVersion)) return [[], 0];
     logger.info("Youtube Provider: Starting AI segmentation...");

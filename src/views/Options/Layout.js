@@ -26,6 +26,10 @@ export default function Layout() {
   const [latestVersion, setLatestVersion] = useState("");
 
   useEffect(() => {
+    // 未配置版本检查地址时，显式禁用版本更新检查
+    if (!process.env.REACT_APP_VERSION_URL) {
+      return;
+    }
     fetch(`${process.env.REACT_APP_VERSION_URL}?t=${Date.now()}`)
       .then((res) => res.text())
       .then((text) => {

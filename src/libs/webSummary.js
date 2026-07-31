@@ -255,8 +255,8 @@ export function parseSummaryMarkdown(markdownText) {
       .filter(Boolean);
   }
 
-  // 提取 "## Details" 段落
-  const detailsMatch = text.match(sectionPattern("Details|详情"));
+  // 提取 "## Details" 段落（兼容“详情/详细说明”两种中文标题写法）
+  const detailsMatch = text.match(sectionPattern("Details|详情|详细说明"));
   if (detailsMatch) {
     result.details = detailsMatch[1].trim();
   }

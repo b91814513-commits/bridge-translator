@@ -36,11 +36,12 @@ export const TRANS_MAX_LENGTH = 100000; // 单次翻译的最大字符数
 export const TRANS_NEWLINE_LENGTH = 20; // 文本被认定为需要单独换行的长度限制
 
 // 默认不参与整页翻译的网站黑名单 (例如翻译工具本身、特定系统页，避免死循环翻译)
+// 在线设置页地址未配置时自动跳过，不写入占位符地址
 export const DEFAULT_BLACKLIST = [
-  "https://user.github.io/bridge-translator/options.html",
+  process.env.REACT_APP_OPTIONSPAGE,
   "https://translate.google.com",
   "https://www.deepl.com/translator",
-];
+].filter(Boolean);
 export const DEFAULT_CSPLIST = []; // 默认禁用 CSP 安全策略的网址列表
 export const DEFAULT_ORILIST = ["https://dict.youdao.com"]; // 默认在跨域请求中需要重写 Origin 请求头的域名
 
@@ -180,6 +181,7 @@ export const DEFAULT_SUBTITLE_SETTING = {
 };
 
 // 预设配置规则的在线订阅 URL 地址列表 (从服务器拉取全球主流网站的最优适配 CSS 选择器规则)
+// 未配置归属地址时过滤为空列表，即显式禁用默认规则订阅
 export const DEFAULT_SUBRULES_LIST = [
   {
     url: process.env.REACT_APP_RULESURL, // 默认官方稳定版规则库
@@ -193,7 +195,7 @@ export const DEFAULT_SUBRULES_LIST = [
     url: process.env.REACT_APP_RULESURL_OFF, // 默认关闭翻译规则库
     selected: false,
   },
-];
+].filter(({ url }) => Boolean(url));
 
 export const DEFAULT_MOUSEHOVER_KEY = ["ControlLeft"]; // 默认触发悬停翻译的触发按键 (左 Ctrl 键)
 export const OPT_MOUSE_HOVER_DISPLAY_BILINGUAL = "bilingual"; // 鼠标悬停翻译：把译文插入页面形成双语对照

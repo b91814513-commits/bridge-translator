@@ -15,10 +15,14 @@ const SUMMARY_CONTAINER_ID = "bridge-summary-popup";
 
 let reactRoot = null;
 let hostElement = null;
+let emotionCache = null;
 
 /**
  * 挂载并显示总结弹窗。
  * 若容器尚未创建则首次挂载，否则仅更新 props 并显示。
+ * REVIEW: 弹窗必须挂载在 Shadow DOM 内，并将 emotion cache 的 container 指向 shadow root，
+ * 与 tranbox.js / shadowDomManager.js 的约定保持一致。否则 ThemeProvider 内的 CssBaseline
+ * 会把 body 背景色（淡粉色）等全局样式注入宿主页面 <head>，导致整个网页变粉。
  *
  * @param {Object} options
  * @param {string} options.summaryText 总结文本
@@ -39,21 +43,24 @@ export function showSummaryPopup({
     hostElement.id = SUMMARY_CONTAINER_ID;
     document.body.appendChild(hostElement);
 
-    const cache = createCache({
+    // Shadow DOM 隔离样式，CssBaseline 的 html/body 选择器在 shadow 内匹配不到宿主页面
+    const shadowContainer = hostElement.attachShadow({ mode: "open" });
+    const appRoot = document.createElement("div");
+    appRoot.className = `${SUMMARY_CONTAINER_ID}_wrapper notranslate`;
+    shadowContainer.appendChild(appRoot);
+
+    emotionCache = createCache({
       key: "bridge-summary",
       prepend: true,
+      container: shadowContainer,
     });
 
-    reactRoot = ReactDOM.createRoot(hostElement);
-    renderPopup({ summaryText, loading, error, onClose, i18n, cache });
+    reactRoot = ReactDOM.createRoot(appRoot);
   } else {
     hostElement.style.display = "";
-    const cache = createCache({
-      key: "bridge-summary",
-      prepend: true,
-    });
-    renderPopup({ summaryText, loading, error, onClose, i18n, cache });
   }
+
+  renderPopup({ summaryText, loading, error, onClose, i18n });
 }
 
 /**
@@ -77,12 +84,13 @@ export function destroySummaryPopup() {
     hostElement.remove();
     hostElement = null;
   }
+  emotionCache = null;
 }
 
 /**
  * 渲染 SummaryPopup 组件到已挂载的 React Root。
  */
-function renderPopup({ summaryText, loading, error, onClose, i18n, cache }) {
+function renderPopup({ summaryText, loading, error, onClose, i18n }) {
   const handleClose = () => {
     hideSummaryPopup();
     onClose?.();
@@ -90,7 +98,7 @@ function renderPopup({ summaryText, loading, error, onClose, i18n, cache }) {
 
   reactRoot.render(
     <React.StrictMode>
-      <CacheProvider value={cache}>
+      <CacheProvider value={emotionCache}>
         <ThemeProvider>
           <SummaryPopup
             summaryText={summaryText}

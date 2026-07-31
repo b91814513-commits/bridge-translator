@@ -1,7 +1,13 @@
 import {
   createAiChunkScheduler,
   eventsToSubtitles,
+  resolveSegSlugByTrackKind,
 } from "./youtubeAiSegmentation";
+import {
+  OPT_TRANS_OPENAI,
+  OPT_TRANS_DEEPSEEK,
+  OPT_TRANS_MICROSOFT,
+} from "../config/api.js";
 
 jest.mock("../libs/log.js", () => ({
   LogLevel: {
@@ -347,5 +353,135 @@ describe("createAiChunkScheduler", () => {
       progressed: 66,
       chunkNum: 2,
     });
+  });
+});
+
+describe("resolveSegSlugByTrackKind", () => {
+  const openaiApi = {
+    apiSlug: "my-openai",
+    apiType: OPT_TRANS_OPENAI,
+    isDisabled: false,
+  };
+  const deepseekApi = {
+    apiSlug: "my-deepseek",
+    apiType: OPT_TRANS_DEEPSEEK,
+    isDisabled: false,
+  };
+  const machineApi = {
+    apiSlug: "my-microsoft",
+    apiType: OPT_TRANS_MICROSOFT,
+    isDisabled: false,
+  };
+
+  test("manual track (normalized 'standard') disables AI segmentation", () => {
+    expect(
+      resolveSegSlugByTrackKind({
+        trackKind: "standard",
+        segSlugOverride: null,
+        segSlug: "my-openai",
+        transApis: [openaiApi],
+      })
+    ).toBe("-");
+  });
+
+  test("explicit non-asr kinds (forced/future values) disable AI segmentation", () => {
+    for (const trackKind of ["forced", "some-future-kind"]) {
+      expect(
+        resolveSegSlugByTrackKind({
+          trackKind,
+          segSlugOverride: null,
+          segSlug: "my-openai",
+          transApis: [openaiApi],
+        })
+      ).toBe("-");
+    }
+  });
+
+  test("asr track keeps the configured segSlug", () => {
+    expect(
+      resolveSegSlugByTrackKind({
+        trackKind: "asr",
+        segSlugOverride: null,
+        segSlug: "my-deepseek",
+        transApis: [openaiApi, deepseekApi],
+      })
+    ).toBe("my-deepseek");
+  });
+
+  test("asr track without configured segSlug auto-picks the first enabled AI api", () => {
+    expect(
+      resolveSegSlugByTrackKind({
+        trackKind: "asr",
+        segSlugOverride: null,
+        segSlug: "-",
+        transApis: [
+          machineApi,
+          { ...openaiApi, isDisabled: true },
+          deepseekApi,
+        ],
+      })
+    ).toBe("my-deepseek");
+  });
+
+  test("asr track stays disabled when no AI api is available", () => {
+    expect(
+      resolveSegSlugByTrackKind({
+        trackKind: "asr",
+        segSlugOverride: null,
+        segSlug: "-",
+        transApis: [machineApi, { ...openaiApi, isDisabled: true }],
+      })
+    ).toBe("-");
+
+    expect(
+      resolveSegSlugByTrackKind({
+        trackKind: "asr",
+        segSlugOverride: null,
+        segSlug: "-",
+        transApis: undefined,
+      })
+    ).toBe("-");
+  });
+
+  test("user override wins unconditionally in both directions", () => {
+    // 人工字幕上用户手动启用某个 AI 断句服务
+    expect(
+      resolveSegSlugByTrackKind({
+        trackKind: "standard",
+        segSlugOverride: "my-openai",
+        segSlug: "-",
+        transApis: [openaiApi],
+      })
+    ).toBe("my-openai");
+
+    // asr 字幕上用户手动禁用 AI 断句
+    expect(
+      resolveSegSlugByTrackKind({
+        trackKind: "asr",
+        segSlugOverride: "-",
+        segSlug: "my-openai",
+        transApis: [openaiApi],
+      })
+    ).toBe("-");
+  });
+
+  test("undetermined track kind (null) keeps the configured segSlug as-is", () => {
+    expect(
+      resolveSegSlugByTrackKind({
+        trackKind: null,
+        segSlugOverride: null,
+        segSlug: "my-openai",
+        transApis: [openaiApi],
+      })
+    ).toBe("my-openai");
+
+    expect(
+      resolveSegSlugByTrackKind({
+        trackKind: undefined,
+        segSlugOverride: null,
+        segSlug: "-",
+        transApis: [openaiApi],
+      })
+    ).toBe("-");
   });
 });

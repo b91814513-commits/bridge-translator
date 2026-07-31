@@ -10,7 +10,7 @@ import {
   MSG_GET_HTTPCACHE,
   MSG_PUT_HTTPCACHE,
 } from "../config";
-import { kissLog } from "./log";
+import { kissLog, logger } from "./log";
 import { isExt } from "./client";
 import { isBg } from "./browser";
 import { sendBgMsg } from "./msg";
@@ -120,7 +120,12 @@ export const putHttpCache = async ({
 export const getHttpCachePolyfill = (input, init) => {
   // 插件前端：发送消息查询
   if (isExt && !isBg()) {
-    return sendBgMsg(msgGetCacheName(), { input, init });
+    // 读缓存失败（包括上下文失效、消息通道故障）降级为无缓存，
+    // 不应中断主流程，后续会正常走网络请求。
+    return sendBgMsg(msgGetCacheName(), { input, init }).catch((err) => {
+      logger.debug("get http cache", err);
+      return undefined;
+    });
   }
 
   // 油猴/网页/后台端点：直接本地查询
@@ -144,7 +149,11 @@ function msgGetCacheName() {
 export const putHttpCachePolyfill = (input, init, data) => {
   // 插件前端：发送消息写入
   if (isExt && !isBg()) {
-    return sendBgMsg(MSG_PUT_HTTPCACHE, { input, init, data });
+    // 写缓存失败静默记录（已成功获取的主数据不应因缓存写失败而报错，
+    // 也避免 fire-and-forget 调用产生未捕获的 Promise 拒绝）。
+    return sendBgMsg(MSG_PUT_HTTPCACHE, { input, init, data }).catch((err) => {
+      logger.debug("put http cache", err);
+    });
   }
 
   // 油猴/网页/后台端点：直接本地写入

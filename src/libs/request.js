@@ -84,6 +84,42 @@ export const mergeAbortSignals = (signals = []) => {
 export const createTimeoutSignal = (timeout) =>
   AbortSignal?.timeout && timeout ? AbortSignal.timeout(timeout) : undefined;
 
+/**
+ * 创建"空闲超时"控制器：区别于固定总超时，只要持续有数据到达（调用方不断 bump）就不会中断，
+ * 仅在距上次活动超过 idleMs 时才 abort。适用于流式 SSE——大响应可以流很久，
+ * 但真正长时间零数据（含首包前无响应）时能及时中断以触发上层降级。
+ *
+ * @param {number} idleMs 空闲超时阈值，单位毫秒；为假值时不启用超时。
+ * @returns {{signal: AbortSignal, bump: Function, clear: Function}} 空闲超时控制器。
+ */
+export const createIdleTimeoutController = (idleMs) => {
+  const controller = new AbortController();
+  let timer = null;
+
+  const clear = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
+  const bump = () => {
+    if (!idleMs) return;
+    clear();
+    timer = setTimeout(() => {
+      // abort 后底层 fetch/reader 会 reject，经由流式通道传播为错误以触发降级。
+      controller.abort(
+        new DOMException(`Stream idle timeout after ${idleMs}ms`, "TimeoutError")
+      );
+    }, idleMs);
+  };
+
+  // 立即启动首个计时窗口，覆盖"连接建立 + 首包到达"阶段。
+  bump();
+
+  return { signal: controller.signal, bump, clear };
+};
+
 const parseResponseHeaders = (responseHeaders) => {
   const headers = {};
   try {
@@ -275,6 +311,13 @@ export const fetchHandle = async ({ input, init, opts = {} }) => {
 };
 
 /**
+ * 前台代理请求的保底超时余量：在 background 自身 httpTimeout 之上额外留出的等待时间。
+ * 若 Service Worker 在处理期间被回收，sendMessage 的 Promise 可能永不 settle，
+ * 前台必须自行限时结束等待，让上层降级逻辑（如字幕内置断句）得以触发。
+ */
+const PROXY_TIMEOUT_EXTRA_MS = 10 * 1000;
+
+/**
  * 普通请求的跨上下文代理入口。
  *
  * @param {Object} params 参数对象。
@@ -290,6 +333,11 @@ export const fnPolyfill = ({ fn, msg = MSG_FETCH, ...args }) => {
       opts: { ...args.opts, signal: undefined },
     };
     const requestPromise = sendBgMsg(msg, safeArgs);
+    // 超时/取消胜出后 requestPromise 可能稍晚才 reject，预先挂接处理器避免 unhandled rejection
+    requestPromise.catch(() => {});
+
+    const racers = [requestPromise];
+
     if (signal) {
       const abortPromise = new Promise((_, reject) => {
         if (signal.aborted) {
@@ -306,10 +354,29 @@ export const fnPolyfill = ({ fn, msg = MSG_FETCH, ...args }) => {
           { once: true }
         );
       });
-      return Promise.race([requestPromise, abortPromise]);
+      racers.push(abortPromise);
     }
+
+    // 保底限时：background SW 若在处理期间被回收，消息通道可能永不回应，
+    // 以 httpTimeout + 余量强制结束等待，避免调用方（如 AI 断句）永久挂起。
+    const proxyTimeout =
+      normalizeHttpTimeout(args.opts?.httpTimeout) + PROXY_TIMEOUT_EXTRA_MS;
+    let timeoutTimer = null;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutTimer = setTimeout(
+        () =>
+          reject(
+            new Error(
+              `Background fetch proxy timed out after ${proxyTimeout}ms`
+            )
+          ),
+        proxyTimeout
+      );
+    });
+    racers.push(timeoutPromise);
+
     // Content Script 直接跨域能力受限，普通请求统一交给 Background 代发。
-    return requestPromise;
+    return Promise.race(racers).finally(() => clearTimeout(timeoutTimer));
   }
 
   return fn({ ...args });

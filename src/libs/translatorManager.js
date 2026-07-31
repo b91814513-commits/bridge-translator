@@ -192,7 +192,13 @@ export default class TranslatorManager {
     if (this.#isUserscript) {
       window.removeEventListener("message", this.#innerMessageHandler);
     } else {
-      browser.runtime.onMessage.removeListener(this.#browserMessageHandler);
+      // 上下文失效时 removeListener 会同步抛出，包入 try/catch 以保证
+      // 后续的快捷键、触屏、菜单等清理逻辑不被中断。
+      try {
+        browser.runtime.onMessage.removeListener(this.#browserMessageHandler);
+      } catch (err) {
+        logger.debug("removeListener failed (context invalidated):", err);
+      }
       if (this.#isIframe) {
         window.removeEventListener("message", this.#innerMessageHandler);
       }
