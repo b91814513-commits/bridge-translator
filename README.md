@@ -12,6 +12,8 @@
 [![Platform](https://img.shields.io/badge/platform-Chrome%20%7C%20Edge%20%7C%20Firefox-4285F4)](#-安装)
 [![Manifest](https://img.shields.io/badge/Manifest-V3-8957e5)]()
 
+**中文** · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
+
 </div>
 
 > [!IMPORTANT]

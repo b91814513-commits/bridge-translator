@@ -1,196 +1,177 @@
-# KISS Translator
+<div align="center">
 
-[English](README.en.md) | [中文](README.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+<img src="public/images/logo192.png" alt="Bridge Translator" width="132" />
 
-A simple, open source [bilingual translation extension & Greasemonkey script](https://github.com/fishjar/kiss-translator).
+# Bridge Translator
 
-[kiss-translator.webm](https://github.com/fishjar/kiss-translator/assets/1157624/f7ba8a5c-e4a8-4d5a-823a-5c5c67a0a47f)
+**A bilingual translation browser extension with AI web-page & YouTube video summarization**
 
-## Features
+[![Version](https://img.shields.io/badge/version-1.0.0-ff5c8d)](https://github.com/b91814513-commits/bridge-translator/releases)
+[![Based on KISS Translator](https://img.shields.io/badge/based%20on-KISS%20Translator-42b983)](https://github.com/fishjar/kiss-translator)
+[![License](https://img.shields.io/badge/license-GPL--3.0-f78c40)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Chrome%20%7C%20Edge%20%7C%20Firefox-4285F4)](#-installation)
+[![Manifest](https://img.shields.io/badge/Manifest-V3-8957e5)]()
 
-- [x] Keep it simple, smart
-- [x] Open source
-- [x] Adapt to common browsers
-  - [x] Chrome/Edge
-  - [x] Firefox
-  - [x] Kiwi (Android)
-  - [x] Orion (iOS)
-  - [x] Safari
-  - [x] Thunderbird
-- [x] Supports multiple translation services
-  - [x] Google/Microsoft
-  - [x] Tencent/Volcengine
-  - [x] OpenAI/Gemini/Claude/Ollama/DeepSeek/OpenRouter
-  - [x] DeepL/DeepLX
-  - [x] AzureAI / CloudflareAI
-  - [x] Chrome built-in AI translation (BuiltinAI)
-- [x] Covers common translation scenarios
-  - [x] Webpage bilingual translation
-  - [x] Input-box translation
-    - Instantly translate text in input fields into other languages via shortcut keys
-  - [x] Text selection translation
-    - [x] Open translation popup on any page, support multiple translation services for comparison
-    - [x] English dictionary lookup
-    - [x] Save vocabulary
-  - [x] Hover translation
-  - [x] YouTube subtitle translation
-    - Support translating video subtitles with any translation service and display bilingually
-    - Built-in basic subtitle merging and sentence-splitting algorithm to improve translation quality
-    - Supports AI-powered sentence segmentation for even better translation
-    - Custom subtitle style
-- [x] Supports diverse translation modes
-  - [x] Supports both automatic text recognition and manual rule modes
-    - Automatic text recognition mode allows most sites to be translated fully without writing rules
-    - Manual rule mode enables extreme optimization for specific sites
-  - [x] Custom translation styling
-  - [x] Supports rich-text translation and rendering, preserving links and other text styles where possible
-  - [x] Option to show only translation (hide original text)
-- [x] Advanced translation API features
-  - [x] With custom API support, theoretically works with any translation service
-  - [x] Batch aggregation of translation requests
-  - [x] Supports streaming for real-time translation results
-  - [x] Supports AI conversation context memory to improve translation quality
-  - [x] Custom AI terminology dictionary
-  - [x] All APIs support hooks and custom parameters for advanced usage
-- [x] Cross-client data synchronization
-  - [x] KISS-Worker（cloudflare/docker）
-  - [x] WebDAV
-- [x] Custom translation rules
-  - [x] Rule subscription/rule sharing
-  - [x] Customized terminology
-- [x] Custom shortcut keys
-  - `Alt+Q` Toggle Translation
-  - `Alt+C` Toggle Styles
-  - `Alt+K` Open Setting Popup
-  - `Alt+S` Open Translate Popup / Translate Selected Text
-  - `Alt+O` Open Options Page
-  - `Alt+I` Input Box Translation
+[中文](README.md) · **English** · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-## Install
+</div>
 
-> Note: For the following reasons, it is recommended to use browser extensions first
->
-> - Browser extensions have more complete functions (local language recognition, context menu, etc.)
-> - Grease Monkey script will encounter more usage problems (cross domain issues, script conflicts, etc.)
+> [!IMPORTANT]
+> **This project is built on top of the open-source [KISS Translator](https://github.com/fishjar/kiss-translator) (by [@fishjar](https://github.com/fishjar)), v2.0.28.**
+> Bridge Translator **fully inherits** KISS Translator's powerful translation capabilities, and adds **AI web-page summarization** and **YouTube video summarization**, along with substantial improvements to stability, UI, and sync.
+> Heartfelt thanks to fishjar and all KISS Translator contributors 🙏. This project is released under the upstream **GPL-3.0** license.
 
-- [x] Browser extension
-  - [x] Chrome [Installation address](https://chrome.google.com/webstore/detail/kiss-translator/bdiifdefkgmcblbcghdlonllpjhhjgof?hl=en)
-    - [x] Kiwi (Android)
-    - [x] Orion (iOS)
-  - [x] Edge [Installation address](https://microsoftedge.microsoft.com/addons/detail/%E7%AE%80%E7%BA%A6%E7%BF%BB%E8%AF%91/jemckldkclkinpjighnoilpbldbdmmlh?hl=en)
-  - [x] Firefox [Installation address](https://addons.mozilla.org/en-US/firefox/addon/kiss-translator/)
-  - [ ] Safari
-    - [ ] Safari (Mac)
-    - [ ] Safari (iOS)
-  - [x] Thunderbird [Download address](https://github.com/fishjar/kiss-translator/releases)
-- [x] GreaseMonkey Script
-  - [x] Chrome/Edge/Firefox ([Tampermonkey](https://www.tampermonkey.net/)/[Violentmonkey](https://violentmonkey.github.io/)) [Installation link](https://fishjar.github.io/kiss-translator/kiss-translator.user.js)
-    - [Greasy Fork](https://greasyfork.org/zh-CN/scripts/472840-kiss-translator)
-  - [x] iOS Safari ([Userscripts Safari](https://github.com/quoid/userscripts)) [Installation link](https://fishjar.github.io/kiss-translator/kiss-translator-ios-safari.user.js)
+---
 
-## Associated Projects
+## 📖 What is this
 
-- Data synchronization service: [https://github.com/fishjar/kiss-worker](https://github.com/fishjar/kiss-worker)
-  - Data synchronization service available for this project.
-  - Can also be used to share personal private rule lists.
-  - Deploy by yourself, manage by yourself, data is private.
-- Community subscription rules: [https://github.com/fishjar/kiss-rules](https://github.com/fishjar/kiss-rules)
-  - Provides the latest and most complete list of subscription rules maintained by the community.
-  - Help with rules-related issues.
+Bridge Translator is a Manifest V3 browser extension for Chrome / Edge / Firefox. It keeps all of KISS Translator's bilingual translation abilities (in-page translation, selection, input box, mouse-hover, YouTube subtitles, 25+ translation services…), and extends "**translation**" into "**understanding**" — using your own AI provider to **summarize an entire web page** or **an entire video** in one click, so long content reads faster.
 
-## Frequently Asked Questions
+> The upstream translation features are only touched on briefly here. The focus below is **what Bridge Translator adds and improves over KISS Translator**.
 
-### How to Set Keyboard Shortcuts
+## ✨ What's new & improved vs. KISS Translator
 
-Set this in the extension management page, for example:
+| Capability | KISS Translator v2.0.28 (upstream) | Bridge Translator |
+|---|:---:|---|
+| Bilingual page / selection / input / hover translation | ✅ | ✅ Fully inherited |
+| YouTube subtitle translation + AI segmentation | ✅ | ✅ Inherited + sidebar integration |
+| **AI web-page summary** | ❌ | ✅ One click · structured · `Alt+W` |
+| **YouTube video summary** | ❌ | ✅ Sidebar tab · timestamped sections |
+| UI theme | Default | 🎀 Brand-new pink theme + rebrand |
+| Sync & backup | KISS-Worker / WebDAV / Gist | Split upload/download · local import/export · WebDAV / Gist |
+| MV3 streaming stability | — | Keep-alive + timeout fallback, fixes stream hangs |
 
-- chrome [chrome://extensions/shortcuts](chrome://extensions/shortcuts)
-- firefox [about:addons](about:addons)
+### 🆕 AI web-page summary
 
-### What is the priority order of rule settings?
+Extracts the current page's main content in one click (auto-stripping nav, ads, footers; prioritizing `<article>` / `<main>` / content areas), then asks your configured AI provider for a **structured summary** — an overview, key points, and details — rendered as Markdown with one-click copy. Default shortcut `Alt+W`.
 
-Personal Rules > Subscription Rules > Global Rules
+<div align="center">
+<img src="docs/screenshots/web-summary.png" alt="AI web-page summary" width="820" />
+<br/><i>Summarizing the KISS Translator project page — overview, key points and details at a glance</i>
+</div>
 
-Among these, Global Rules have the lowest priority but are very important as they serve as the default rules.
+### 🎬 YouTube video summary
 
-### API (Ollama, etc.) Test Failure
+Adds a "**Video Summary**" tab to the YouTube sidebar. Based on the video's bilingual subtitles (with timestamps), it generates "**key points + section details**", each labeled with a timestamp so you can skim and jump through long videos.
 
-Common reasons for API test failures include:
+<div align="center">
+<img src="docs/screenshots/video-summary.png" alt="YouTube video summary" width="820" />
+<br/><i>"Key points" distill the whole video; "Section details" break it down by timestamp (0:03 / 1:04…)</i>
+</div>
 
-- Incorrect address:
-  - For example, `Ollama` has a native API address and an `Openai`-compatible address. This plugin currently supports the `Openai`-compatible address and does not support the `Ollama` native API address.
-- Some AI models do not support batch translation:
-  - In this case, you can choose to disable batch translation or use a custom API.
-  - Alternatively, you can use a custom API. For details, please refer to: [Custom API Example Documentation](https://github.com/fishjar/kiss-translator/blob/master/custom-api_v2.md)
-- Some AI models have inconsistent parameters:
-  - For example, the parameters of the `Gemini` native API are highly inconsistent. Some model versions do not support certain parameters, leading to errors.
-  - In this case, you can modify the request body using a `Hook`, or replace it with `Gemini2` (an OpenAI-compatible address).
-- The server restricts cross-origin access, returning a 403 error:
-  - For example, `Ollama` requires adding the environment variable `OLLAMA_ORIGINS=*` when starting. See: https://github.com/fishjar/kiss-translator/issues/174
+### 🎧 Bilingual subtitles (enhanced)
 
-### Custom API doesn't work in Tampermonkey scripts
+The sidebar unifies "**Bilingual Subtitles / Vocabulary / Video Summary**"; subtitles can be exported as **VTT** or **raw JSON**; when a subtitle request isn't intercepted, it **actively pulls as a fallback** so you never get stuck "waiting for subtitles".
 
-Tampermonkey scripts require adding domains to the whitelist; otherwise, requests cannot be sent.
+<div align="center">
+<img src="docs/screenshots/bilingual-subtitle.png" alt="Bilingual subtitles" width="820" />
+<br/><i>Line-by-line bilingual subtitles with timestamp jumping; export to VTT / JSON</i>
+</div>
 
-### How to set up a hook function for a custom API
+### 🎨 New look: pink theme + rebrand
 
-Custom APIs are very powerful and flexible, and can theoretically connect to any translation API.
+Renamed to **Bridge Translator**, with a signature **pink bridge** icon in all sizes; the light-pink theme is fixed and applied across the options page, popup, and selection box.
 
-Example reference: [custom-api_v2.md](https://github.com/fishjar/kiss-translator/blob/master/custom-api_v2.md)
+<div align="center">
+<img src="docs/screenshots/options-settings.png" alt="Options UI" width="820" />
+<br/><i>A clean light-pink options UI; shortcuts (including "Summarize page — Alt+W") are customizable</i>
+</div>
 
-### How to directly access the Tampermonkey script settings page
+### 🔁 Sync & backup improvements
 
-Settings page address: https://fishjar.github.io/kiss-translator/options.html
+- **Split upload / download**: separate buttons to avoid a one-click sync accidentally overwriting cloud or local data.
+- **Local config import / export**: back up and migrate all settings without any cloud; exports **exclude API keys, sync passwords and other secrets**.
+- **Sync encryption passphrase**: cloud data is stored encrypted; sync backends are streamlined to **WebDAV** and **GitHub Gist**.
 
-## Future Plans 
+<div align="center">
+<img src="docs/screenshots/sync-backup.png" alt="Sync & backup" width="820" />
+<br/><i>Split upload/download + local import/export for safer, controllable migration and backup</i>
+</div>
 
- This is a side project with no strict timeline. Community contributions are welcome. The following are preliminary feature directions:
+### 🛡️ Stability & engineering
 
-- [x] **Batch Text Requests**: Optimize request strategy to reduce translation API calls and improve performance.
-- [x] **Enhanced Rich Text Translation**: Support accurate translation of complex page structures and rich text content.
-- [x] **Advanced Custom/AI Interfaces**: Add support for streaming, context memory, multi-turn conversations, and other advanced AI features.
-- [x] **Fallback English Dictionary**: When translation services fail, fall back to a local dictionary lookup.
-- [x] **Improved YouTube Subtitle Support**: Enhance merging and translation experience for streaming subtitles, reducing sentence fragmentation.
-- [ ] **Upgraded Rule Collaboration System**: Introduce more flexible rule sharing, version management, and community review processes.
+- **Fixed MV3 streaming hangs**: added **Service Worker keep-alive + foreground fallback timeout + idle timeout** to the background AI stream proxy, fixing subtitle translation "infinite loading" and web-summary "Failed to fetch".
+- **All page-level injected UI is Shadow-DOM isolated**: components bind their own emotion cache, so the pink theme never leaks into host pages.
+- **Added CI & unit tests**: a GitHub Actions pipeline plus related tests for better maintainability.
 
- If you're interested in any of these directions, feel free to discuss in [Issues](https://github.com/fishjar/kiss-translator/issues) or submit a PR!
+## 🧩 Core capabilities inherited from upstream
 
-## Development Guidelines
+The following come from KISS Translator and are fully preserved:
 
-```sh
-git clone https://github.com/fishjar/kiss-translator.git
-cd kiss-translator
-git checkout dev # Submit a PR suggestion to push to the dev branch
+- 🌐 Bilingual **in-page translation** (auto-detect + manual-rule modes)
+- 🖱️ **Selection** / **input box** / **mouse-hover** translation, English dictionary, saved words
+- 🎞️ **YouTube subtitle** bilingual translation with AI segmentation
+- 🔌 **25+ translation services**: Google / Microsoft / DeepL / OpenAI / Gemini / Claude / DeepSeek / Ollama / OpenRouter / Tongyi / Volcengine …
+- 🎯 Custom rules, rule subscriptions, AI glossary, streaming, AI context memory
+- 🖥️ Multi-target: **Chrome / Edge / Firefox / Thunderbird** (and userscript)
+
+## 🚀 Installation
+
+### Option 1: From Releases (recommended)
+
+1. Download the latest `bridge-translator-chrome.zip` from [Releases](https://github.com/b91814513-commits/bridge-translator/releases).
+2. Unzip it anywhere.
+3. Open `chrome://extensions/` and enable **Developer mode** (top-right).
+4. Click **Load unpacked** and select the unzipped folder.
+
+### Option 2: Build from source
+
+```bash
+# Requires Node.js 18+ and pnpm 9.14.4
+git clone https://github.com/b91814513-commits/bridge-translator.git
+cd bridge-translator
 pnpm install
-pnpm build
+pnpm build:chrome      # output → build/chrome/
 ```
 
-### External Trigger Example
+Then load `build/chrome/` via `chrome://extensions/`.
 
-```js
-// `toggle_translate`   Toggle translation
-// `toggle_styles`      Toggle styles
-// `toggle_popup`       Open/close control panel
-// `toggle_transbox`    Open/close translation popup
-// `toggle_hover_node`  Translate hovered paragraph
-// `input_translate`    Translate input box
-window.dispatchEvent(new CustomEvent("kiss_translator", {detail: { action: "toggle_translate" }}));
+> [!TIP]
+> **Configure an AI provider first**: web summary, video summary and AI translation all require an API key for any OpenAI-compatible / Gemini / Claude / DeepSeek provider, set under the extension's **API settings**.
+
+## ⌨️ Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Alt+W` | Generate an AI summary of the current page |
+| `Alt+Q` | Toggle page translation |
+| `Alt+K` | Open the extension popup |
+| `Alt+S` | Open the selection translation box |
+| `Alt+C` | Cycle translation styles |
+
+> All shortcuts are customizable in **Basic Settings**.
+
+## 🛠️ Development
+
+```bash
+pnpm start             # Web dev server (REACT_APP_CLIENT=web)
+pnpm build:chrome      # Build Chrome extension only
+pnpm build             # Build all targets (Chrome/Edge/Firefox/Thunderbird/Web/userscript)
+pnpm test              # Run Jest tests
+pnpm format            # Prettier
 ```
 
-## Discussion
+One codebase produces browser extensions, a web homepage, and userscripts via the `REACT_APP_CLIENT` env var and Webpack multi-config. See [AGENTS.md](AGENTS.md) for more.
 
-- Join [Telegram Group](https://t.me/+RRCu_4oNwrM2NmFl)
+## 🧱 Tech stack & architecture
 
-## Appreciate
+**Stack**: React 18 · MUI 5 · Emotion · react-markdown · webextension-polyfill · Manifest V3 (Service Worker) · Webpack (react-app-rewired) · pnpm.
 
-![appreciate](https://github.com/fishjar/kiss-translator/assets/1157624/ebaecabe-2934-4172-8085-af236f5ee399)
+AI summary data flow:
 
-## Sponsors
+```mermaid
+flowchart LR
+  A[Web / YouTube page] -->|extract text / subtitles| B[Content Script]
+  B -->|postMessage| C[Background MV3 SW]
+  C -->|keep-alive + stream proxy| D[AI provider]
+  D -->|stream back| C
+  C --> B --> E["Shadow DOM popup<br/>Markdown render"]
+```
 
-<p align="center">
-<a href="https://platform.ephone.ai/" target="_blank">
-<img src="https://platform.ephone.ai/logo-e.png" width="96" /><br />
-<b>ePhone AI</b><br />
-An AI model API relay and aggregation platform for developers, supporting multiple large models such as OpenAI, Claude, Gemini, DeepSeek, and GLM.
-</a>
-</p>
+## 🙏 Acknowledgments
+
+Bridge Translator stands on the shoulders of giants. Its core translation engine, rule system, and subtitle framework all come from [**KISS Translator**](https://github.com/fishjar/kiss-translator), created by [@fishjar](https://github.com/fishjar) and many contributors. This project would not exist without their open-source work. Thank you ❤️.
+
+## 📄 License
+
+Released under [**GPL-3.0**](LICENSE) (inherited from upstream KISS Translator). You may freely use, modify and redistribute it, but derivative works must also be open-sourced under GPL-3.0.
