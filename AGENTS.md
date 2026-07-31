@@ -4,7 +4,7 @@ This file provides guidance to Qoder (qoder.com) when working with code in this 
 
 ## Project Overview
 
-KISS Translator is a multi-platform browser extension that provides in-page translation, subtitle translation, selection translation, and input-box translation. A single codebase produces **Chrome/Edge/Firefox/Thunderbird extensions**, a **web homepage**, and **Tampermonkey userscripts** via Webpack multi-config builds driven by the `REACT_APP_CLIENT` environment variable.
+Bridge Translator is a multi-platform browser extension (derived from KISS Translator v2.0.28) that provides in-page translation, subtitle translation, selection translation, and input-box translation. A single codebase produces **Chrome/Edge/Firefox/Thunderbird extensions**, a **web homepage**, and **Tampermonkey userscripts** via Webpack multi-config builds driven by the `REACT_APP_CLIENT` environment variable.
 
 ## Commands
 
@@ -54,7 +54,7 @@ Version is sourced from `package.json` and synced everywhere via `pnpm sync-vers
 
 ### Entry Points & Runtime Contexts
 
-Each entry sets `globalThis.__KISS_CONTEXT__` to identify the host environment:
+Each entry sets `globalThis.__BRIDGE_CONTEXT__` to identify the host environment:
 
 | Entry | Context | Role |
 |---|---|---|
@@ -139,4 +139,10 @@ Uses `declarativeNetRequest` to dynamically strip third-party Content-Security-P
 
 ## Release Flow
 
-Dual-branch model: `master` (production) + `dev` (development). No direct pushes to master. PR merge + git tag `v*` triggers GitHub Actions: build all targets → create release from CHANGELOG.md → upload 5 zip packages (chrome/edge/firefox/userscript/thunderbird) + deploy web to GitHub Pages.
+**Current state**: local-only repository — single `master` branch, no remote and no tags configured. Releases are produced locally:
+
+1. Bump version: `pnpm version:patch` / `version:minor` / `version:major` (auto-runs `sync-version`)
+2. Update `CHANGELOG.md` (latest entry at the top under a `## ` heading)
+3. Build packages: `pnpm build+zip` → 5 zips in `build/` (chrome/edge/firefox/userscript/thunderbird)
+
+`.github/workflows/release.yml` is retained but currently dormant: it only triggers on a `v*` tag pushed to a GitHub remote. If a remote is added later, pushing a `v*` tag runs: build all targets → create release with notes extracted from `CHANGELOG.md` → upload the 5 zip packages → deploy web to GitHub Pages.

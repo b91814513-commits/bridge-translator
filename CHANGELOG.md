@@ -1,3 +1,12 @@
+## v1.0.0
+
+- 项目更名为 **Bridge Translator**，版本号重置为 1.0.0，作为本项目的首个版本。
+- 本项目基于 [KISS Translator](https://github.com/fishjar/kiss-translator) v2.0.28 派生而来，以下 `v2.x` 及更早条目均为上游 KISS Translator 的历史更新记录，保留以供参考。
+
+---
+
+以下为上游 KISS Translator 历史更新记录：
+
 ## v2.0.28
 
 - PDF 页面支持使用选中文本打开划词翻译弹窗。

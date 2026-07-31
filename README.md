@@ -1,196 +1,175 @@
-# KISS Translator 简约翻译
+<div align="center">
 
-[English](README.en.md) | [中文](README.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+<img src="public/images/logo192.png" alt="Bridge Translator" width="132" />
 
-一个简约、开源的 [双语对照翻译扩展 & 油猴脚本](https://github.com/fishjar/kiss-translator)。
+# Bridge Translator
 
-[kiss-translator.webm](https://github.com/fishjar/kiss-translator/assets/1157624/f7ba8a5c-e4a8-4d5a-823a-5c5c67a0a47f)
+**一款带 AI 网页总结与 YouTube 视频总结的双语对照翻译浏览器扩展**
 
-## 特性
+[![Version](https://img.shields.io/badge/version-1.0.0-ff5c8d)](https://github.com/b91814513-commits/bridge-translator/releases)
+[![Based on KISS Translator](https://img.shields.io/badge/based%20on-KISS%20Translator-42b983)](https://github.com/fishjar/kiss-translator)
+[![License](https://img.shields.io/badge/license-GPL--3.0-f78c40)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Chrome%20%7C%20Edge%20%7C%20Firefox-4285F4)](#-安装)
+[![Manifest](https://img.shields.io/badge/Manifest-V3-8957e5)]()
 
-- [x] 保持简约
-- [x] 开放源代码
-- [x] 适配常见浏览器
-  - [x] Chrome/Edge
-  - [x] Firefox
-  - [x] Kiwi (Android)
-  - [x] Orion (iOS)
-  - [x] Safari
-  - [x] Thunderbird
-- [x] 支持多种翻译服务
-  - [x] Google/Microsoft
-  - [x] Tencent/Volcengine
-  - [x] OpenAI/Gemini/Claude/Ollama/DeepSeek/OpenRouter
-  - [x] DeepL/DeepLX
-  - [x] AzureAI/CloudflareAI
-  - [x] Chrome浏览器内置AI翻译(BuiltinAI)
-- [x] 覆盖常见翻译场景
-  - [x] 网页双语对照翻译
-  - [x] 输入框翻译
-    - 通过快捷键立即将输入框内文本翻译成其他语言
-  - [x] 划词翻译
-    - [x] 任意页面打开翻译框，可用多种翻译服务对比翻译
-    - [x] 英文词典翻译
-    - [x] 收藏词汇
-  - [x] 鼠标悬停翻译
-  - [x] YouTube 字幕翻译
-    - 支持任意翻译服务对视频字幕进行翻译并双语显示
-    - 内置基础的字幕合并与断句算法，提升翻译效果
-    - 支持AI断句功能，可进一步提升翻译质量
-    - 自定义字幕样式
-- [x] 支持多样翻译效果
-  - [x] 支持自动识别文本与手动规则两种模式
-    - 自动识别文本模式使得绝大部分网站无需编写规则也能翻译完整
-    - 手动规则模式，可以针对特定网站极致优化
-  - [x] 自定义译文样式
-  - [x] 支持富文本翻译及显示，能够尽量保留原文中的链接及其他文本样式
-  - [x] 支持仅显示译文（隐藏原文）
-- [x] 翻译接口高级功能
-  - [x] 通过自定义接口，理论上支持任何翻译接口
-  - [x] 聚合批量发送翻译文本
-  - [x] 支持流式传输，实时显示翻译结果
-  - [x] 支持AI上下文会话记忆功能，提升翻译效果
-  - [x] 自定义AI术语词典
-  - [x] 所有接口均支持Hook和自定义参数等高级功能
-- [x] 跨客户端数据同步
-  - [x] KISS-Worker（cloudflare/docker）
-  - [x] WebDAV
-- [x] 自定义翻译规则
-  - [x] 规则订阅/规则分享
-  - [x] 自定义专业术语
-- [x] 自定义快捷键
-  - `Alt+Q` 开启翻译
-  - `Alt+C` 切换样式
-  - `Alt+K` 打开设置弹窗
-  - `Alt+S` 打开翻译弹窗/翻译选中文字
-  - `Alt+O` 打开设置页面
-  - `Alt+I` 输入框翻译
+</div>
 
-## 安装
+> [!IMPORTANT]
+> **本项目基于开源项目 [KISS Translator](https://github.com/fishjar/kiss-translator)（作者 [@fishjar](https://github.com/fishjar)）v2.0.28 二次开发而来。**
+> Bridge Translator 在**完整继承** KISS Translator 强大翻译能力的基础上，新增了 **AI 网页总结**、**YouTube 视频总结**，并对稳定性、界面与同步机制进行了大量优化。
+> 衷心感谢 fishjar 及 KISS Translator 全体贡献者的出色工作 🙏。本项目遵循上游 **GPL-3.0** 协议开源。
 
-> 注：基于以下原因，建议优先使用浏览器扩展
->
-> - 浏览器扩展的功能更完整（本地语言识别、右键菜单等）
-> - 油猴脚本会遇到更多使用上的问题（跨域问题、脚本冲突等）
+---
 
-- [x] 浏览器扩展
-  - [x] Chrome [安装地址](https://chrome.google.com/webstore/detail/kiss-translator/bdiifdefkgmcblbcghdlonllpjhhjgof?hl=zh-CN)
-    - [x] Kiwi (Android)
-    - [x] Orion (iOS)
-  - [x] Edge [安装地址](https://microsoftedge.microsoft.com/addons/detail/%E7%AE%80%E7%BA%A6%E7%BF%BB%E8%AF%91/jemckldkclkinpjighnoilpbldbdmmlh?hl=zh-CN)
-  - [x] Firefox [安装地址](https://addons.mozilla.org/zh-CN/firefox/addon/kiss-translator/)
-  - [ ] Safari
-    - [ ] Safari (Mac)
-    - [ ] Safari (iOS) 
-  - [x] Thunderbird [下载地址](https://github.com/fishjar/kiss-translator/releases)
-- [x] 油猴脚本
-  - [x] Chrome/Edge/Firefox ([Tampermonkey](https://www.tampermonkey.net/)/[Violentmonkey](https://violentmonkey.github.io/)) [安装链接](https://fishjar.github.io/kiss-translator/kiss-translator.user.js)
-    - [Greasy Fork](https://greasyfork.org/zh-CN/scripts/472840-kiss-translator)
-  - [x] iOS Safari ([Userscripts Safari](https://github.com/quoid/userscripts)) [安装链接](https://fishjar.github.io/kiss-translator/kiss-translator-ios-safari.user.js)
+## 📖 这是什么
 
-## 关联项目
+Bridge Translator 是一个基于 Manifest V3 的 Chrome / Edge / Firefox 浏览器扩展。它保留了上游 KISS Translator 全部的双语对照翻译能力（网页翻译、划词、输入框、悬停、YouTube 字幕、25+ 翻译服务……），并在此之上把「**翻译**」延伸到了「**理解**」——用你自己的 AI 接口，一键**总结整篇网页**、**总结整段视频**，让长内容读得更快。
 
-- 数据同步服务: [https://github.com/fishjar/kiss-worker](https://github.com/fishjar/kiss-worker)
-  - 可用于本项目的数据同步服务。
-  - 亦可用于分享个人的私有规则列表。
-  - 自己部署，自己管理，数据私有。
-- 社区订阅规则: [https://github.com/fishjar/kiss-rules](https://github.com/fishjar/kiss-rules)
-  - 提供社区维护的，最新最全的订阅规则列表。
-  - 求助规则相关的问题。
+> 上游的核心翻译功能这里不再赘述，下面重点介绍 **Bridge Translator 相比 KISS Translator 新增与增强的部分**。
 
-## 常见问题
+## ✨ 相比 KISS Translator 的新增与增强
 
-### 如何设置快捷键
+| 能力 | KISS Translator v2.0.28（上游） | Bridge Translator |
+|---|:---:|---|
+| 双语网页翻译 / 划词 / 输入框 / 悬停 | ✅ | ✅ 完整继承 |
+| YouTube 字幕翻译 + AI 断句 | ✅ | ✅ 继承 + 侧栏整合 |
+| **AI 网页总结** | ❌ | ✅ 一键 · 结构化中文 · `Alt+W` |
+| **YouTube 视频总结** | ❌ | ✅ 侧栏 Tab · 带时间戳分段 |
+| 界面主题 | 默认 | 🎀 全新浅粉色主题 + 品牌重塑 |
+| 同步与备份 | KISS-Worker / WebDAV / Gist | 上传下载分离 · 本地配置导入导出 · WebDAV / Gist |
+| MV3 流式稳定性 | — | 保活 + 超时兜底，修复流式挂起 |
 
-在插件管理那里设置，例如： 
+### 🆕 AI 网页总结
 
-- chrome [chrome://extensions/shortcuts](chrome://extensions/shortcuts)
-- firefox [about:addons](about:addons)
+一键提取当前网页正文（自动剔除导航、广告、页脚等噪声，优先识别 `<article>` / `<main>` 主内容区），交给你配置的 AI 接口生成**结构化的简体中文总结**——包含「核心概述 + 要点 + 详细说明」，以 Markdown 渲染并支持一键复制。默认快捷键 `Alt+W`。
 
-### 规则设置的优先级是如何的
+<div align="center">
+<img src="docs/screenshots/web-summary.png" alt="AI 网页总结" width="820" />
+<br/><i>正在总结 KISS Translator 项目主页——结构化概述、要点与详细说明一目了然</i>
+</div>
 
-个人规则 > 订阅规则 > 全局规则
+### 🎬 YouTube 视频总结
 
-其中全局规则优先级最低，但非常重要，相当于兜底规则。
+在 YouTube 播放页右侧边栏新增「**视频总结**」Tab。它基于视频的双语字幕（带时间戳）生成「**主要观点 + 分段详情**」，每个段落都标注时间点，让你在长视频里快速定位与跳读。
 
-### 接口（Ollama等）测试失败
+<div align="center">
+<img src="docs/screenshots/video-summary.png" alt="YouTube 视频总结" width="820" />
+<br/><i>「主要观点」提炼全片核心，「分段详情」按时间戳（0:03 / 1:04…）拆解脉络</i>
+</div>
 
-一般接口测试失败常见有以下几种原因：
+### 🎧 双语字幕（增强整合）
 
-- 地址填错了：
-  - 比如 `Ollama` 有原生接口地址和 `Openai` 兼容的地址，本插件目前统一支持 `Openai` 兼容的地址，不支持 `Ollama` 原生接口地址
-- 某些AI模型不支持聚合翻译：
-  - 此种情况可以选择禁用聚合翻译或通过自定义接口的方式来使用。
-  - 或通过自定义接口的方式来使用，详情参考： [自定义接口示例文档](https://github.com/fishjar/kiss-translator/blob/master/custom-api_v2.md)
-- 某些AI模型的参数不一致：
-  - 比如 `Gemini` 原生接口参数非常不一致，部分版本的模型不支持某些参数会导致返回错误。
-  - 此种情况可以通过 `Hook` 修改请求 `body` ,或者更换为 `Gemini2` (`Openai` 兼容的地址)
-- 服务器跨域限制访问，返回403错误：
-  - 比如 `Ollama` 启动时须添加环境变量 `OLLAMA_ORIGINS=*`, 参考：https://github.com/fishjar/kiss-translator/issues/174
+侧边栏把「**双语字幕 / 生词本 / 视频总结**」三大功能整合到一处；字幕支持导出为 **VTT** 或**源数据 JSON**；当字幕请求未被拦截时会**主动拉取兜底**，避免卡在「等待字幕」。
 
-### 填写的接口在油猴脚本不能使用
+<div align="center">
+<img src="docs/screenshots/bilingual-subtitle.png" alt="双语字幕" width="820" />
+<br/><i>逐句双语对照、时间戳定位，可一键下载 VTT / JSON</i>
+</div>
 
-油猴脚本需要增加域名白名单，否则不能发出请求。
+### 🎨 全新界面：浅粉色主题 + 品牌重塑
 
-### 如何设置自定义接口的hook函数
+统一更名为 **Bridge Translator**，配套标志性的**粉色桥梁**图标与全套尺寸；修复并启用了浅粉色（light-pink）主题，覆盖设置页、弹窗、划词框等所有界面。
 
-自定义接口功能非常强大、灵活，理论可以接入任何翻译接口。
+<div align="center">
+<img src="docs/screenshots/options-settings.png" alt="设置界面" width="820" />
+<br/><i>清爽的浅粉色设置界面，快捷键（含「总结网页 Alt+W」）均可自定义</i>
+</div>
 
-示例参考： [custom-api_v2.md](https://github.com/fishjar/kiss-translator/blob/master/custom-api_v2.md)
+### 🔁 同步与备份优化
 
-### 如何直接进入油猴脚本设置页面
+- **上传 / 下载分离**：拆分为独立按钮，避免一键同步误覆盖云端或本地数据。
+- **本地配置导入 / 导出**：无需云端即可备份与迁移全部配置；导出文件**不含 API 密钥、同步密码等敏感信息**。
+- **同步加密口令**：云端数据加密存储；精简同步后端为 **WebDAV** 与 **GitHub Gist**。
 
-设置页面地址： https://fishjar.github.io/kiss-translator/options.html
+<div align="center">
+<img src="docs/screenshots/sync-backup.png" alt="同步与备份" width="820" />
+<br/><i>上传/下载分离 + 本地配置导入导出，数据迁移与备份更安全可控</i>
+</div>
 
-## 未来规划 
+### 🛡️ 稳定性与工程优化
 
- 本项目为业余开发，无严格时间表，欢迎社区共建。以下为初步设想的功能方向：
+- **修复 MV3 流式挂起**：为后台 AI 流式代理加入 **Service Worker 保活 + 前台保底超时 + 空闲超时**，解决字幕翻译「无限加载」与网页总结「Failed to fetch」。
+- **页面级 UI 全部 Shadow DOM 隔离**：总结弹窗等注入组件绑定独立 emotion cache，杜绝浅粉色主题样式泄漏到宿主网页。
+- **新增 CI 与单元测试**：补充 GitHub Actions 流水线与相关测试，提升可维护性。
 
-- [x] **聚合发送文本**：优化请求策略，减少翻译接口调用次数，提升性能。
-- [x] **增强富文本翻译**：支持更复杂的页面结构和富文本内容的准确翻译。
-- [x] **强化自定义/AI 接口**：支持流式传输、上下文记忆、多轮对话等高级 AI 功能。
-- [x] **英文词典备灾机制**：当翻译服务失效时，可切换其他词典或 fallback 到本地词典查询。
-- [x] **优化 YouTube 字幕支持**：改进流式字幕的合并与翻译体验，减少断句。
-- [ ] **规则共建机制升级**：引入更灵活的规则分享、版本管理与社区评审流程。
- 
- 如果你对某个方向感兴趣，欢迎在 [Issues](https://github.com/fishjar/kiss-translator/issues) 中讨论或提交 PR！
+## 🧩 继承自上游的核心能力
 
-## 开发指引
+以下能力来自 KISS Translator，Bridge Translator 完整保留：
 
-```sh
-git clone https://github.com/fishjar/kiss-translator.git
-cd kiss-translator
-git checkout dev # 提交PR建议推送到dev分支
+- 🌐 网页**双语对照翻译**（自动识别文本 + 手动规则两种模式）
+- 🖱️ **划词翻译** / **输入框翻译** / **鼠标悬停翻译** / 英文词典 / 收藏词汇
+- 🎞️ **YouTube 字幕**双语翻译与 AI 智能断句
+- 🔌 **25+ 翻译服务**：Google / Microsoft / DeepL / OpenAI / Gemini / Claude / DeepSeek / Ollama / OpenRouter / 通义 / 火山 …
+- 🎯 自定义规则、规则订阅、AI 术语词典、流式传输、AI 上下文会话记忆
+- 🖥️ 多端支持：**Chrome / Edge / Firefox / Thunderbird**（及油猴脚本）
+
+## 🚀 安装
+
+### 方式一：从 Releases 安装（推荐）
+
+1. 前往 [Releases](https://github.com/b91814513-commits/bridge-translator/releases) 下载最新的 `bridge-translator-chrome.zip`。
+2. 解压到本地任意目录。
+3. 打开 `chrome://extensions/`，开启右上角「**开发者模式**」。
+4. 点击「**加载已解压的扩展程序**」，选择解压后的目录即可。
+
+### 方式二：从源码构建
+
+```bash
+# 需要 Node.js 18+ 与 pnpm 9.14.4
+git clone https://github.com/b91814513-commits/bridge-translator.git
+cd bridge-translator
 pnpm install
-pnpm build
+pnpm build:chrome      # 产物输出到 build/chrome/
 ```
 
-### 外部触发示例
+构建完成后，在 `chrome://extensions/` 中加载 `build/chrome/` 目录。
 
-```js
-// `toggle_translate`   切换翻译
-// `toggle_styles`      切换样式
-// `toggle_popup`       打开/关闭控制面板
-// `toggle_transbox`    打开/关闭翻译弹窗
-// `toggle_hover_node`  翻译鼠标悬停段落
-// `input_translate`    翻译输入框
-window.dispatchEvent(new CustomEvent("kiss_translator", {detail: { action: "toggle_translate" }}));
+> [!TIP]
+> **使用 AI 功能前需先配置接口**：网页总结、视频总结及 AI 翻译都需要在扩展的「**接口设置**」中，填入任意 OpenAI 兼容 / Gemini / Claude / DeepSeek 等接口的 API Key。
+
+## ⌨️ 快捷键
+
+| 快捷键 | 功能 |
+|---|---|
+| `Alt+W` | 生成当前网页的 AI 总结 |
+| `Alt+Q` | 开启 / 关闭页面翻译 |
+| `Alt+K` | 打开扩展弹窗 |
+| `Alt+S` | 打开划词翻译框 |
+| `Alt+C` | 切换译文样式 |
+
+> 以上快捷键均可在「基本设置」中自定义。
+
+## 🛠️ 开发
+
+```bash
+pnpm start             # Web 开发服务器（REACT_APP_CLIENT=web）
+pnpm build:chrome      # 仅构建 Chrome 扩展
+pnpm build             # 构建全部目标（Chrome/Edge/Firefox/Thunderbird/Web/油猴）
+pnpm test              # 运行 Jest 测试
+pnpm format            # Prettier 格式化
 ```
 
-## 交流
+同一套代码通过 `REACT_APP_CLIENT` 环境变量与 Webpack 多配置，产出浏览器扩展、Web 主页与油猴脚本。更多命令与架构说明见 [AGENTS.md](AGENTS.md)。
 
-- 加入 [Telegram 群](https://t.me/+RRCu_4oNwrM2NmFl)
+## 🧱 技术栈与架构
 
-## 赞赏
+**技术栈**：React 18 · MUI 5 · Emotion · react-markdown · webextension-polyfill · Manifest V3（Service Worker）· Webpack（react-app-rewired）· pnpm。
 
-![appreciate](https://github.com/fishjar/kiss-translator/assets/1157624/ebaecabe-2934-4172-8085-af236f5ee399)
+AI 总结的数据流：
 
-## 赞助商
+```mermaid
+flowchart LR
+  A[网页 / YouTube 页面] -->|提取正文·字幕| B[Content Script]
+  B -->|postMessage| C[Background MV3 SW]
+  C -->|保活 + 流式代理| D[AI 接口]
+  D -->|流式返回| C
+  C --> B --> E["Shadow DOM 弹窗<br/>Markdown 渲染"]
+```
 
-<p align="center">
-<a href="https://platform.ephone.ai/" target="_blank">
-<img src="https://platform.ephone.ai/logo-e.png" width="96" /><br />
-<b>ePhone AI</b><br />
-一个面向开发者的 AI 模型 API 中转与聚合平台，支持 OpenAI、Claude、Gemini、DeepSeek、GLM 等多家大模型。
-</a>
-</p>
+## 🙏 致谢
+
+Bridge Translator 站在巨人的肩膀上。核心翻译引擎、规则系统、字幕框架等均来自 [**KISS Translator**](https://github.com/fishjar/kiss-translator)，由 [@fishjar](https://github.com/fishjar) 及众多贡献者打造。没有他们的开源工作，就没有本项目。再次致以诚挚的谢意 ❤️。
+
+## 📄 许可证
+
+本项目遵循 [**GPL-3.0**](LICENSE) 协议（继承自上游 KISS Translator）。你可以自由使用、修改与再分发，但衍生作品须同样以 GPL-3.0 开源。
