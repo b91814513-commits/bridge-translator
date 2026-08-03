@@ -866,7 +866,7 @@ describe("Translator rule styles", () => {
       apiName: "Google",
     };
 
-    test("uses webTranslateApiSlug when the matched rule is the global rule", async () => {
+    test("uses the global rule apiSlug for web translate (webTranslateApiSlug ignored)", async () => {
       document.body.innerHTML =
         '<main id="root"><p id="target">Hello world</p></main>';
       // 默认 rule 继承 GLOBLA_RULE：pattern="*"，apiSlug="Microsoft"
@@ -878,34 +878,33 @@ describe("Translator rule styles", () => {
 
       expect(apiTranslate).toHaveBeenCalled();
       const args = apiTranslate.mock.calls[0][0];
-      expect(args.apiSetting.apiSlug).toBe("Gemini_abc");
-      expect(args.apiSetting.apiType).toBe("Gemini");
+      // 网页翻译统一使用全局规则的 apiSlug（Microsoft），忽略 webTranslateApiSlug
+      expect(args.apiSetting.apiSlug).toBe("Microsoft");
+      expect(args.apiSetting.apiType).not.toBe("Gemini");
     });
 
-    test("falls back to rule apiSlug when webTranslateApiSlug is disabled", async () => {
+    test("falls back to DEFAULT_API_SETTING when global rule apiSlug is not found", async () => {
       document.body.innerHTML =
         '<main id="root"><p id="target">Hello world</p></main>';
+      // rule 的 apiSlug 不在 transApis 中，回退到默认服务
       createTranslator(
-        {},
-        {
-          webTranslateApiSlug: "Gemini_abc",
-          transApis: [{ ...geminiApi, isDisabled: true }],
-        }
+        { apiSlug: "Google", pattern: "*" },
+        { transApis: [] }
       );
       await flushAsync();
 
       const args = apiTranslate.mock.calls[0][0];
-      // 全局规则默认 apiSlug 为 Microsoft（并且不在 transApis 中时回退到底层默认）
+      // 全局规则 apiSlug 未找到时回退到默认服务（当前为微软）
       expect(args.apiSetting.apiSlug).toBe("Microsoft");
     });
 
-    test("prefers a specific site rule apiSlug over webTranslateApiSlug", async () => {
+    test("uses a specific site rule apiSlug", async () => {
       document.body.innerHTML =
         '<main id="root"><p id="target">Hello world</p></main>';
       // 针对特定网站配置了规则（pattern 非 *），且显式指定 Google
       createTranslator(
         { apiSlug: "Google", pattern: "example.com" },
-        { webTranslateApiSlug: "Gemini_abc", transApis: [googleApi, geminiApi] }
+        { transApis: [googleApi, geminiApi] }
       );
       await flushAsync();
 

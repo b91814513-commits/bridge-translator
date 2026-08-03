@@ -3,7 +3,6 @@ import {
   APP_CONSTS,
   OPT_STYLE_FUZZY,
   GLOBLA_RULE,
-  GLOBAL_KEY,
   DEFAULT_SETTING,
   // DEFAULT_MOUSEHOVER_KEY,
   OPT_STYLE_NONE,
@@ -722,34 +721,7 @@ export class Translator {
   // 接口参数
   // todo: 不用频繁查找计算
   get #apiSetting() {
-    // 用户设置的网页翻译默认服务（webTranslateApiSlug）最优先。
-    // 关键点：全局规则 GLOBLA_RULE.apiSlug 默认为 OPT_TRANS_MICROSOFT（而非 GLOBAL_KEY），
-    // 因此不能仅凭 rule.apiSlug === GLOBAL_KEY 判断“继承全局”，否则用户选择的 Gemini 会被跳过，
-    // 导致请求始终命中微软翻译（edge.microsoft.com/translate/auth）。
-    // 这里用“是否匹配全局规则（pattern 为 * 或 apiSlug 为继承标识）”来判断是否应优先用户偏好。
-    const userPreferredSlug = this.#setting.webTranslateApiSlug;
-    const isGlobalRule =
-      this.#rule.pattern === "*" || this.#rule.apiSlug === GLOBAL_KEY;
-    if (
-      isGlobalRule &&
-      userPreferredSlug &&
-      userPreferredSlug !== GLOBAL_KEY
-    ) {
-      const preferred = this.#apisMap.get(userPreferredSlug);
-      if (preferred && !preferred.isDisabled) {
-        return preferred;
-      }
-      // 用户选择的网页翻译服务缺失或已被禁用时，给出明确提示，避免静默回退到默认服务
-      // 导致用户误以为仍在使用默认的微软翻译（表现为请求 edge.microsoft.com/translate/auth）。
-      kissLog(
-        "web translate preferred API unavailable, fallback. slug=",
-        userPreferredSlug,
-        "available=",
-        !!preferred,
-        "disabled=",
-        preferred?.isDisabled
-      );
-    }
+    // 网页翻译统一使用 规则设置 → 全局规则 中配置的 apiSlug，不再读取 webTranslateApiSlug。
     const ruleApi = this.#apisMap.get(this.#rule.apiSlug);
     if (ruleApi) {
       return ruleApi;
@@ -757,9 +729,7 @@ export class Translator {
     // 兜底使用默认服务（当前为微软），记录日志便于排查配置问题
     kissLog(
       "web translate api resolved to default because rule api not found. rule.apiSlug=",
-      this.#rule.apiSlug,
-      "webTranslateApiSlug=",
-      userPreferredSlug
+      this.#rule.apiSlug
     );
     return DEFAULT_API_SETTING;
   }
