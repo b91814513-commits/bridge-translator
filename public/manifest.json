@@ -78,6 +78,9 @@
       "description": "__MSG_open_options__"
     },
     "summarize_page": {
+      "suggested_key": {
+        "default": "Alt+W"
+      },
       "description": "__MSG_command_summarize_page__"
     }
   },
