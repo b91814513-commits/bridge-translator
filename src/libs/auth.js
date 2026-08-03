@@ -76,7 +76,11 @@ const _msAuth = () => {
           return cachedResult.token;
         }
       } catch (error) {
-        // 静默异常，随后落入下方逻辑重新发起请求
+        // 调用方（如网络闪断、远端 404）导致缓存 Promise 被 reject 时，
+        // 必须主动清空缓存，否则下一次调用仍会 await 这个已失败 (rejected) 的 Promise，
+        // 导致短期内无法重试。这里将 tokenPromise 置空，允许重新发起请求。
+        kissLog("ms auth cache rejected, resetting for retry", error);
+        tokenPromise = null;
       }
     }
 

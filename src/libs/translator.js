@@ -3,6 +3,7 @@ import {
   APP_CONSTS,
   OPT_STYLE_FUZZY,
   GLOBLA_RULE,
+  GLOBAL_KEY,
   DEFAULT_SETTING,
   // DEFAULT_MOUSEHOVER_KEY,
   OPT_STYLE_NONE,
@@ -721,12 +722,46 @@ export class Translator {
   // 接口参数
   // todo: 不用频繁查找计算
   get #apiSetting() {
-    // return (
-    //   this.#setting.transApis.find(
-    //     (api) => api.apiSlug === this.#rule.apiSlug
-    //   ) || DEFAULT_API_SETTING
-    // );
-    return this.#apisMap.get(this.#rule.apiSlug) || DEFAULT_API_SETTING;
+    // 用户设置的网页翻译默认服务（webTranslateApiSlug）最优先。
+    // 关键点：全局规则 GLOBLA_RULE.apiSlug 默认为 OPT_TRANS_MICROSOFT（而非 GLOBAL_KEY），
+    // 因此不能仅凭 rule.apiSlug === GLOBAL_KEY 判断“继承全局”，否则用户选择的 Gemini 会被跳过，
+    // 导致请求始终命中微软翻译（edge.microsoft.com/translate/auth）。
+    // 这里用“是否匹配全局规则（pattern 为 * 或 apiSlug 为继承标识）”来判断是否应优先用户偏好。
+    const userPreferredSlug = this.#setting.webTranslateApiSlug;
+    const isGlobalRule =
+      this.#rule.pattern === "*" || this.#rule.apiSlug === GLOBAL_KEY;
+    if (
+      isGlobalRule &&
+      userPreferredSlug &&
+      userPreferredSlug !== GLOBAL_KEY
+    ) {
+      const preferred = this.#apisMap.get(userPreferredSlug);
+      if (preferred && !preferred.isDisabled) {
+        return preferred;
+      }
+      // 用户选择的网页翻译服务缺失或已被禁用时，给出明确提示，避免静默回退到默认服务
+      // 导致用户误以为仍在使用默认的微软翻译（表现为请求 edge.microsoft.com/translate/auth）。
+      kissLog(
+        "web translate preferred API unavailable, fallback. slug=",
+        userPreferredSlug,
+        "available=",
+        !!preferred,
+        "disabled=",
+        preferred?.isDisabled
+      );
+    }
+    const ruleApi = this.#apisMap.get(this.#rule.apiSlug);
+    if (ruleApi) {
+      return ruleApi;
+    }
+    // 兜底使用默认服务（当前为微软），记录日志便于排查配置问题
+    kissLog(
+      "web translate api resolved to default because rule api not found. rule.apiSlug=",
+      this.#rule.apiSlug,
+      "webTranslateApiSlug=",
+      userPreferredSlug
+    );
+    return DEFAULT_API_SETTING;
   }
 
   get #transAllnow() {
@@ -1701,6 +1736,11 @@ export class Translator {
 
   // 将不同来源的异常统一转成可展示、可复制的纯文本错误信息
   #formatTranslateError(error) {
+    return this.#decorateTranslateError(this.#rawTranslateError(error));
+  }
+
+  // 提取原始错误文本
+  #rawTranslateError(error) {
     if (error instanceof Error) {
       const tag = error.name ? `[${error.name}]` : "[UnknownError]";
       const msg = error.message ? ` ${error.message}` : "";
@@ -1717,6 +1757,16 @@ export class Translator {
     } catch (_) {
       return String(error);
     }
+  }
+
+  // 在错误信息末尾追加用户可理解的中文说明，帮助定位配置问题。
+  // 当请求命中微软 Edge 翻译鉴权接口（edge.microsoft.com/translate/auth）时，
+  // 说明翻译实际使用的是微软服务而非用户配置的自定义模型，给出明确排查指引。
+  #decorateTranslateError(text) {
+    if (!text || !text.includes("edge.microsoft.com/translate/auth")) {
+      return text;
+    }
+    return `${text}\n\n提示：本次请求实际使用了「微软翻译」，但其鉴权接口（edge.microsoft.com/translate/auth）返回了错误。请检查「设置 → 网页翻译」中的默认翻译服务是否已切换到所需的自定义翻译模型，并确认该模型的 API Key 与接入地址均已正确填写并保存。`;
   }
 
   // 将文本写入剪贴板；当 Clipboard API 不可用时，回退到临时文本框复制

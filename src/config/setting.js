@@ -263,5 +263,6 @@ export const DEFAULT_SETTING = {
   subtitleSetting: DEFAULT_SUBTITLE_SETTING, // 字幕翻译模块的具体参数设置
   logLevel: LogLevel.INFO.value, // 扩展运行时的全局调试日志级别
   rootMargin: 500, // 滚动翻译机制触发时，段落距离屏幕视口边界的触发高度 (px)
+  webTranslateApiSlug: OPT_TRANS_MICROSOFT, // 网页翻译默认使用的翻译服务标识
   customStyles: DEFAULT_CUSTOM_STYLES, // 用于个性化译文表现的自定义 CSS 样式规则列表
 };

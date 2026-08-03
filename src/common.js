@@ -1,4 +1,4 @@
-import { OPT_HIGHLIGHT_WORDS_DISABLE } from "./config";
+import { OPT_HIGHLIGHT_WORDS_DISABLE, STOKEY_SETTING } from "./config";
 import {
   getFabWithDefault,
   getSettingWithDefault,
@@ -425,6 +425,25 @@ export async function run(isUserscript = false) {
     // 暴露给上下文失效兜底，失效时停止翻译器（含 IntersectionObserver、监听器等）
     managerRef = translatorManager;
     translatorManager.start();
+
+    // 监听全局设置变更，使「网页翻译默认服务」等配置在已打开的页面中即时生效，
+    // 无需用户手动刷新页面（扩展模式下）。油猴环境无 storage.onChanged，跳过。
+    if (!isUserscript) {
+      let settingsUpdateTimer = null;
+      browser?.storage?.onChanged?.addListener((changes, areaName) => {
+        if (areaName !== "local" || !changes?.[STOKEY_SETTING]) return;
+        // 防抖，避免设置页连续写入时频繁重建翻译器
+        clearTimeout(settingsUpdateTimer);
+        settingsUpdateTimer = setTimeout(async () => {
+          try {
+            const nextSetting = await getSettingWithDefault();
+            managerRef?.updateSettings(nextSetting);
+          } catch (err) {
+            logger.debug("reload settings on change failed:", err);
+          }
+        }, 300);
+      });
+    }
 
     // 9. 若当前页面是嵌套的 iframe，不进行视频字幕翻译，避免多个 iframe 里重复跑字幕服务造成冲突
     if (isIframe || isPdfDocument) {

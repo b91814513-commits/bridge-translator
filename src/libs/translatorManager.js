@@ -150,7 +150,7 @@ export default class TranslatorManager {
    * 它只快照当前运行期状态，销毁挂 DOM 的子模块，再用快照创建新实例。
    * 这能保留用户当前的翻译开关、划词翻译开关和输入框翻译开关。
    */
-  restart(reason = "spa-navigation") {
+  restart(reason = "spa-navigation", nextSetting) {
     if (!this.#isActive) {
       logger.info("TranslatorManager is not running.");
       return;
@@ -160,7 +160,11 @@ export default class TranslatorManager {
     const state = this.#snapshotRuntimeState();
     this.#destroyRuntimeModules();
 
-    this.#setting = state.setting;
+    // 若调用方提供了新的全局设置（例如网页翻译服务在设置页被修改），
+    // 则以新设置覆盖由快照回读的旧设置，使配置变更即时生效。
+    this.#setting = nextSetting
+      ? this.#cloneConfig(nextSetting)
+      : state.setting;
     this.#rule = state.rule;
     this.#fabConfig = state.fabConfig;
     this.#favWords = state.favWords;
@@ -168,6 +172,17 @@ export default class TranslatorManager {
     this.#createRuntimeModules();
     this.#refreshDocumentElementObserver();
     logger.info(`TranslatorManager restarted: ${reason}`);
+  }
+
+  /**
+   * 更新全局设置并重建运行期子模块，使配置变更（如网页翻译默认服务）即时生效。
+   * @param {Object} nextSetting 新的全局设置对象
+   */
+  updateSettings(nextSetting) {
+    if (!this.#isActive || !nextSetting) {
+      return;
+    }
+    this.restart("settings-updated", nextSetting);
   }
 
   /**

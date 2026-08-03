@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
@@ -9,12 +7,12 @@ import MenuItem from "@mui/material/MenuItem";
 import Switch from "@mui/material/Switch";
 import Slider from "@mui/material/Slider";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import Alert from "@mui/material/Alert";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
 import { useI18n } from "../../hooks/I18n";
 import { useSetting } from "../../hooks/Setting";
+import { useApiList } from "../../hooks/Api";
 import { browser } from "../../libs/browser";
 
 // 快捷键列表（来自 manifest commands）
@@ -81,6 +79,7 @@ function openShortcutsPage() {
 export default function WebTranslateSetting() {
   const i18n = useI18n();
   const { setting, updateSetting } = useSetting();
+  const { enabledApis } = useApiList();
   const [commands, setCommands] = useState([]);
 
   // 从 manifest commands 中读取已配置的快捷键
@@ -102,6 +101,7 @@ export default function WebTranslateSetting() {
     webTranslateAutoPopup = false,
     webTranslateOpacity = 95,
     webTranslateMode = "page",
+    webTranslateApiSlug = "Microsoft",
     webTranslateLangFrom = "auto",
     webTranslateLangTo = "zh-CN",
     webTranslateAutoSites = "",
@@ -128,223 +128,212 @@ export default function WebTranslateSetting() {
     <Box>
       <Stack spacing={3}>
         {/* 快捷键设置区域 */}
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              {i18n("web_translate_shortcuts")}
-            </Typography>
-
-            {/* 已配置的快捷键列表 */}
-            <Grid container spacing={2} columns={12} sx={{ mb: 2 }}>
-              {commands.length > 0
-                ? commands.map((cmd) => (
-                    <Grid item xs={12} sm={6} md={4} key={cmd.name}>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <TextField
-                          size="small"
-                          label={cmd.description}
-                          value={cmd.shortcut || ""}
-                          fullWidth
-                          disabled
-                        />
-                        <IconButton onClick={openShortcutsPage} size="small">
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Stack>
-                    </Grid>
-                  ))
-                : SHORTCUT_LIST.map((sc) => (
-                    <Grid item xs={12} sm={6} md={3} key={sc.name}>
+        <Box>
+          <Grid container spacing={2} columns={12}>
+            {commands.length > 0
+              ? commands.map((cmd) => (
+                  <Grid item xs={12} sm={6} md={4} key={cmd.name}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
                       <TextField
                         size="small"
-                        label={i18n(sc.i18nKey)}
-                        value={sc.key}
+                        label={cmd.description}
+                        value={cmd.shortcut || ""}
                         fullWidth
                         disabled
                       />
-                    </Grid>
-                  ))}
-            </Grid>
-
-            {/* 网页总结快捷键（需手动设置） */}
-            <Grid container spacing={2} columns={12} sx={{ mb: 2 }}>
-              <Grid item xs={12} sm={6} md={3}>
-                <TextField
-                  size="small"
-                  label={i18n("web_translate_shortcut_summary")}
-                  value={i18n("web_translate_shortcut_manual")}
-                  fullWidth
-                  disabled
-                />
-              </Grid>
-            </Grid>
-
-            {/* 引导提示 */}
-            <Alert severity="info" sx={{ mt: 1 }}>
-              {i18n("web_translate_shortcuts_hint")}
-            </Alert>
-          </CardContent>
-        </Card>
-
-        {/* 翻译窗口显示选项 */}
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              {i18n("web_translate_window")}
-            </Typography>
-
-            <Grid container spacing={2} columns={12}>
-              {/* 窗口位置 */}
-              <Grid item xs={12} sm={12} md={6} lg={3}>
-                <TextField
-                  select
-                  fullWidth
-                  size="small"
-                  name="webTranslatePosition"
-                  value={webTranslatePosition}
-                  label={i18n("web_translate_position")}
-                  onChange={handleChange}
-                >
-                  {POSITION_OPTIONS.map((pos) => (
-                    <MenuItem key={pos} value={pos}>
-                      {i18n(POSITION_I18N[pos])}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-
-              {/* 窗口大小 */}
-              <Grid item xs={12} sm={12} md={6} lg={3}>
-                <TextField
-                  select
-                  fullWidth
-                  size="small"
-                  name="webTranslateSize"
-                  value={webTranslateSize}
-                  label={i18n("web_translate_size")}
-                  onChange={handleChange}
-                >
-                  {SIZE_OPTIONS.map((size) => (
-                    <MenuItem key={size} value={size}>
-                      {i18n(SIZE_I18N[size])}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-
-              {/* 自动弹出翻译窗口 */}
-              <Grid item xs={12} sm={12} md={6} lg={3}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={webTranslateAutoPopup}
-                      onChange={handleSwitchChange("webTranslateAutoPopup")}
+                      <IconButton onClick={openShortcutsPage} size="small">
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  </Grid>
+                ))
+              : SHORTCUT_LIST.map((sc) => (
+                  <Grid item xs={12} sm={6} md={3} key={sc.name}>
+                    <TextField
+                      size="small"
+                      label={i18n(sc.i18nKey)}
+                      value={sc.key}
+                      fullWidth
+                      disabled
                     />
-                  }
-                  label={i18n("web_translate_auto_popup")}
-                />
-              </Grid>
-
-              {/* 窗口透明度 */}
-              <Grid item xs={12} sm={12} md={6} lg={3}>
-                <Typography gutterBottom>
-                  {i18n("web_translate_opacity")}: {webTranslateOpacity}%
-                </Typography>
-                <Slider
-                  value={webTranslateOpacity}
-                  onChange={handleOpacityChange}
-                  min={20}
-                  max={100}
-                  step={5}
-                  valueLabelDisplay="auto"
-                />
-              </Grid>
+                  </Grid>
+                ))}
+          </Grid>
+          <Grid container spacing={2} columns={12} sx={{ mt: 2 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                size="small"
+                label={i18n("web_translate_shortcut_summary")}
+                value={i18n("web_translate_shortcut_manual")}
+                fullWidth
+                disabled
+              />
             </Grid>
-          </CardContent>
-        </Card>
+          </Grid>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {i18n("web_translate_shortcuts_hint")}
+          </Typography>
+        </Box>
 
-        {/* 网页翻译行为选项 */}
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              {i18n("web_translate_behavior")}
-            </Typography>
-
-            <Grid container spacing={2} columns={12}>
-              {/* 默认翻译模式 */}
-              <Grid item xs={12} sm={12} md={6} lg={3}>
-                <TextField
-                  select
-                  fullWidth
-                  size="small"
-                  name="webTranslateMode"
-                  value={webTranslateMode}
-                  label={i18n("web_translate_mode")}
-                  onChange={handleChange}
-                >
-                  {MODE_OPTIONS.map((mode) => (
-                    <MenuItem key={mode} value={mode}>
-                      {i18n(MODE_I18N[mode])}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-
-              {/* 翻译语言对 - 源语言 */}
-              <Grid item xs={12} sm={12} md={6} lg={3}>
-                <TextField
-                  select
-                  fullWidth
-                  size="small"
-                  name="webTranslateLangFrom"
-                  value={webTranslateLangFrom}
-                  label={`${i18n("web_translate_lang_pair")} - From`}
-                  onChange={handleChange}
-                >
-                  <MenuItem value="auto">Auto Detect</MenuItem>
-                  <MenuItem value="en">English</MenuItem>
-                  <MenuItem value="zh-CN">简体中文</MenuItem>
-                  <MenuItem value="zh-TW">繁體中文</MenuItem>
-                  <MenuItem value="ja">日本語</MenuItem>
-                  <MenuItem value="ko">한국어</MenuItem>
-                </TextField>
-              </Grid>
-
-              {/* 翻译语言对 - 目标语言 */}
-              <Grid item xs={12} sm={12} md={6} lg={3}>
-                <TextField
-                  select
-                  fullWidth
-                  size="small"
-                  name="webTranslateLangTo"
-                  value={webTranslateLangTo}
-                  label={`${i18n("web_translate_lang_pair")} - To`}
-                  onChange={handleChange}
-                >
-                  <MenuItem value="zh-CN">简体中文</MenuItem>
-                  <MenuItem value="zh-TW">繁體中文</MenuItem>
-                  <MenuItem value="en">English</MenuItem>
-                  <MenuItem value="ja">日本語</MenuItem>
-                  <MenuItem value="ko">한국어</MenuItem>
-                </TextField>
-              </Grid>
+        {/* 翻译行为参数 */}
+        <Box>
+          <Grid container spacing={2} columns={12}>
+            {/* 默认翻译服务（首位，与 InputSetting/Subtitle/Tranbox 一致） */}
+            <Grid item xs={12} sm={12} md={6} lg={3}>
+              <TextField
+                select
+                fullWidth
+                size="small"
+                name="webTranslateApiSlug"
+                value={webTranslateApiSlug}
+                label={i18n("translate_service")}
+                onChange={handleChange}
+              >
+                {enabledApis.map((api) => (
+                  <MenuItem key={api.apiSlug} value={api.apiSlug}>
+                    {api.apiName}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
+            {/* 默认翻译模式 */}
+            <Grid item xs={12} sm={12} md={6} lg={3}>
+              <TextField
+                select
+                fullWidth
+                size="small"
+                name="webTranslateMode"
+                value={webTranslateMode}
+                label={i18n("web_translate_mode")}
+                onChange={handleChange}
+              >
+                {MODE_OPTIONS.map((mode) => (
+                  <MenuItem key={mode} value={mode}>
+                    {i18n(MODE_I18N[mode])}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            {/* 翻译语言对 - 源语言 */}
+            <Grid item xs={12} sm={12} md={6} lg={3}>
+              <TextField
+                select
+                fullWidth
+                size="small"
+                name="webTranslateLangFrom"
+                value={webTranslateLangFrom}
+                label={`${i18n("web_translate_lang_pair")} - From`}
+                onChange={handleChange}
+              >
+                <MenuItem value="auto">Auto Detect</MenuItem>
+                <MenuItem value="en">English</MenuItem>
+                <MenuItem value="zh-CN">简体中文</MenuItem>
+                <MenuItem value="zh-TW">繁體中文</MenuItem>
+                <MenuItem value="ja">日本語</MenuItem>
+                <MenuItem value="ko">한국어</MenuItem>
+              </TextField>
+            </Grid>
+            {/* 翻译语言对 - 目标语言 */}
+            <Grid item xs={12} sm={12} md={6} lg={3}>
+              <TextField
+                select
+                fullWidth
+                size="small"
+                name="webTranslateLangTo"
+                value={webTranslateLangTo}
+                label={`${i18n("web_translate_lang_pair")} - To`}
+                onChange={handleChange}
+              >
+                <MenuItem value="zh-CN">简体中文</MenuItem>
+                <MenuItem value="zh-TW">繁體中文</MenuItem>
+                <MenuItem value="en">English</MenuItem>
+                <MenuItem value="ja">日本語</MenuItem>
+                <MenuItem value="ko">한국어</MenuItem>
+              </TextField>
+            </Grid>
+          </Grid>
+        </Box>
 
-            {/* 自动翻译特定网站 */}
-            <TextField
-              size="small"
-              label={i18n("web_translate_auto_sites")}
-              helperText={i18n("web_translate_auto_sites_hint")}
-              name="webTranslateAutoSites"
-              value={webTranslateAutoSites}
-              onChange={handleChange}
-              maxRows={6}
-              multiline
-              fullWidth
-              sx={{ mt: 2 }}
-            />
-          </CardContent>
-        </Card>
+        {/* 窗口显示参数 */}
+        <Box>
+          <Grid container spacing={2} columns={12}>
+            {/* 窗口位置 */}
+            <Grid item xs={12} sm={12} md={6} lg={3}>
+              <TextField
+                select
+                fullWidth
+                size="small"
+                name="webTranslatePosition"
+                value={webTranslatePosition}
+                label={i18n("web_translate_position")}
+                onChange={handleChange}
+              >
+                {POSITION_OPTIONS.map((pos) => (
+                  <MenuItem key={pos} value={pos}>
+                    {i18n(POSITION_I18N[pos])}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            {/* 窗口大小 */}
+            <Grid item xs={12} sm={12} md={6} lg={3}>
+              <TextField
+                select
+                fullWidth
+                size="small"
+                name="webTranslateSize"
+                value={webTranslateSize}
+                label={i18n("web_translate_size")}
+                onChange={handleChange}
+              >
+                {SIZE_OPTIONS.map((size) => (
+                  <MenuItem key={size} value={size}>
+                    {i18n(SIZE_I18N[size])}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            {/* 自动弹出翻译窗口 */}
+            <Grid item xs={12} sm={12} md={6} lg={3}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={webTranslateAutoPopup}
+                    onChange={handleSwitchChange("webTranslateAutoPopup")}
+                  />
+                }
+                label={i18n("web_translate_auto_popup")}
+              />
+            </Grid>
+            {/* 窗口透明度 */}
+            <Grid item xs={12} sm={12} md={6} lg={3}>
+              <Typography gutterBottom>
+                {i18n("web_translate_opacity")}: {webTranslateOpacity}%
+              </Typography>
+              <Slider
+                value={webTranslateOpacity}
+                onChange={handleOpacityChange}
+                min={20}
+                max={100}
+                step={5}
+                valueLabelDisplay="auto"
+              />
+            </Grid>
+          </Grid>
+        </Box>
+
+        {/* 自动翻译特定网站 */}
+        <TextField
+          size="small"
+          label={i18n("web_translate_auto_sites")}
+          helperText={i18n("web_translate_auto_sites_hint")}
+          name="webTranslateAutoSites"
+          value={webTranslateAutoSites}
+          onChange={handleChange}
+          maxRows={6}
+          multiline
+          fullWidth
+        />
       </Stack>
     </Box>
   );

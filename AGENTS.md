@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance to Qoder (qoder.com) when working with code in this repository.
+This file provides guidance to Lingma (lingma.aliyun.com) when working with code in this repository.
 
 ## Project Overview
 
