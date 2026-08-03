@@ -16,7 +16,7 @@ import SelectAllIcon from "@mui/icons-material/SelectAll";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import MouseIcon from "@mui/icons-material/Mouse";
 import SubtitlesIcon from "@mui/icons-material/Subtitles";
-import TranslateIcon from "@mui/icons-material/Translate";
+import SummarizeIcon from "@mui/icons-material/Summarize";
 import FormatColorText from "@mui/icons-material/FormatColorText";
 import BugReportIcon from "@mui/icons-material/BugReport";
 import TextSnippetIcon from "@mui/icons-material/TextSnippet";
@@ -103,10 +103,10 @@ export default function Navigator(props) {
       icon: <SubtitlesIcon />,
     },
     {
-      id: "web_translate",
-      label: i18n("nav_web_translate"),
-      url: "/webtranslate",
-      icon: <TranslateIcon />,
+      id: "web_summary",
+      label: i18n("nav_web_summary"),
+      url: "/websummary",
+      icon: <SummarizeIcon />,
     },
     {
       id: "words",
