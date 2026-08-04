@@ -1212,7 +1212,13 @@ class YouTubeCaptionProvider {
 
     const videoEl = this.#videoEl;
     if (!videoEl) {
-      logger.warn("Youtube Provider: No video element found");
+      // 视频元素尚未挂载（如刚进入播放页或 SPA 切换瞬间）。
+      // 等待它出现后再启动字幕管理器，避免此时丢弃已经准备好的字幕。
+      // waitForElement 内部用 MutationObserver 监听，命中后自动断开，不会无限重试。
+      logger.warn(
+        "Youtube Provider: No video element found, waiting for it to appear..."
+      );
+      waitForElement(VIDEO_SELECTOR, () => this.#startManager());
       return;
     }
 
