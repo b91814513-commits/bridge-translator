@@ -19,7 +19,10 @@ import {
   isSameLang,
   selectProactiveCaptionTrack,
 } from "./youtubeCaptionTracks.js";
-import { eventsToSubtitles, resolveSegSlugByTrackKind } from "./youtubeAiSegmentation.js";
+import {
+  eventsToSubtitles,
+  resolveSegSlugByTrackKind,
+} from "./youtubeAiSegmentation.js";
 import {
   builtinSegment,
   formatSubtitles,
@@ -598,10 +601,10 @@ class YouTubeCaptionProvider {
         );
         return;
       }
-      logger.info(
-        "Youtube Provider: [diag] intercept: got events",
-        { count: events.length, fromLang }
-      );
+      logger.info("Youtube Provider: [diag] intercept: got events", {
+        count: events.length,
+        fromLang,
+      });
 
       await this.#ingestEventsAndProcess({
         videoId,
@@ -649,15 +652,16 @@ class YouTubeCaptionProvider {
     this.#rawSubtitleEvents = events;
 
     const { toLang } = this.#setting;
-    logger.info(
-      "Youtube Provider: [diag] ingest events",
-      { events: events.length, fromLang, toLang }
-    );
+    logger.info("Youtube Provider: [diag] ingest events", {
+      events: events.length,
+      fromLang,
+      toLang,
+    });
     if (isSameLang(fromLang, toLang)) {
-      logger.info(
-        "Youtube Provider: [diag] skip: source lang equals target",
-        { fromLang, toLang }
-      );
+      logger.info("Youtube Provider: [diag] skip: source lang equals target", {
+        fromLang,
+        toLang,
+      });
       this.#playerUi.showNotification(this.#i18n("subtitle_same_lang"));
       return;
     }
@@ -685,19 +689,16 @@ class YouTubeCaptionProvider {
       effectiveSegSlug !== this.#setting.segSlug
     ) {
       // 智能判断调整了断句策略：人工字幕自动禁用 / asr 字幕自动选用可用 AI 接口
-      logger.info(
-        "Youtube Provider: [diag] segSlug resolved by track kind",
-        {
-          trackKind,
-          configured: this.#setting.segSlug,
-          effective: effectiveSegSlug,
-        }
-      );
+      logger.info("Youtube Provider: [diag] segSlug resolved by track kind", {
+        trackKind,
+        configured: this.#setting.segSlug,
+        effective: effectiveSegSlug,
+      });
     }
-    logger.info(
-      "Youtube Provider: [diag] start processEvents",
-      { flatEvents: flatEvents.length, segSlug: effectiveSegSlug }
-    );
+    logger.info("Youtube Provider: [diag] start processEvents", {
+      flatEvents: flatEvents.length,
+      segSlug: effectiveSegSlug,
+    });
     this.#processEvents({
       videoId,
       flatEvents,
@@ -815,19 +816,20 @@ class YouTubeCaptionProvider {
       const events = await fetchTrackSubtitleEvents(captionTrack);
       if (this.#isStaleProcessing(processingVersion)) return;
       if (!events?.length) {
-        logger.info(
-          "Youtube Provider: [diag] proactive: fetched 0 events",
-          { videoId, trackLang: captionTrack.languageCode }
-        );
+        logger.info("Youtube Provider: [diag] proactive: fetched 0 events", {
+          videoId,
+          trackLang: captionTrack.languageCode,
+        });
         // 直连拿不到字幕（通常是 timedtext 要求 pot 令牌）：
         // 促发播放器自己重新请求字幕，让带有效令牌的真实请求被拦截钩子捕获。
         this.#nudgeYtCaptionReload();
         return;
       }
-      logger.info(
-        "Youtube Provider: [diag] proactive: got events",
-        { count: events.length, fromLang, toLang }
-      );
+      logger.info("Youtube Provider: [diag] proactive: got events", {
+        count: events.length,
+        fromLang,
+        toLang,
+      });
 
       await this.#ingestEventsAndProcess({
         videoId,
@@ -968,10 +970,10 @@ class YouTubeCaptionProvider {
         subtitles,
         progressed
       );
-      logger.info(
-        "Youtube Provider: [diag] processEvents done",
-        { subtitles: this.#subtitles.length, progressed }
-      );
+      logger.info("Youtube Provider: [diag] processEvents done", {
+        subtitles: this.#subtitles.length,
+        progressed,
+      });
       this.#startManager();
       this.#managerInstance?.repairChunkTranslations(managedSubtitles);
     } catch (error) {
@@ -1231,6 +1233,7 @@ class YouTubeCaptionProvider {
         ...this.#setting,
         fromLang: this.#fromLang,
         docInfo: this.#docInfo,
+        t: this.#i18n,
         // 由渲染管理器按 timeupdate/seeked 上报播放窗口，provider 再决定是否触发后续 AI chunk。
         onSubtitleTimeWindow: ({ currentTimeMs, preTrans }) =>
           this.#scheduleAiChunks(currentTimeMs, preTrans),
@@ -1276,15 +1279,13 @@ class YouTubeCaptionProvider {
   #destroyManager() {
     this.#playerUi.showYtCaption();
 
-    if (!this.#managerInstance) {
-      return;
+    if (this.#managerInstance) {
+      logger.info("Youtube Provider: Destroying manager...");
+
+      this.#managerInstance.onSubtitleUpdate = null;
+      this.#managerInstance.destroy();
+      this.#managerInstance = null;
     }
-
-    logger.info("Youtube Provider: Destroying manager...");
-
-    this.#managerInstance.onSubtitleUpdate = null;
-    this.#managerInstance.destroy();
-    this.#managerInstance = null;
 
     if (this.#subtitleListManager) {
       this.#subtitleListManager.destroy();

@@ -26,9 +26,10 @@ export const browser = _browser();
  * 当扩展被重载/更新/卸载后，旧页面中残留的 content script 会成为"孤儿"脚本，
  * 此时 `browser.runtime.id` 会变为 undefined，任何 runtime/storage 调用都会抛出
  * "Extension context invalidated" 异常。
- * @returns {boolean} 上下文有效返回 true；非扩展环境（browser 未加载）也视为 true，交由调用方自行判断
+ * @returns {boolean} runtime 与 storage API 均可用时返回 true
  */
-export const isExtContextValid = () => !browser || !!browser.runtime?.id;
+export const isExtContextValid = () =>
+  Boolean(browser?.runtime?.id && browser?.storage?.local);
 
 /**
  * 判断给定错误是否为扩展上下文失效错误。

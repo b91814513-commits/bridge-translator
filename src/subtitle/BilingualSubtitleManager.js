@@ -6,6 +6,10 @@ import { resolveApiPromptSettings } from "../config/prompt.js";
 import { trustedTypesHelper } from "../libs/trustedTypes.js";
 import { isSubtitleModeEnabled } from "./modes.js";
 import {
+  removeFavoriteOccurrence,
+  saveFavoriteWord,
+} from "../libs/favWords.js";
+import {
   addWordHoverStyles,
   WordTooltipController,
   wrapWordsWithSpans,
@@ -63,6 +67,11 @@ export class BilingualSubtitleManager {
       this.#wordTooltipController = new WordTooltipController({
         getVideoContainer: () => this.#videoEl.parentElement?.parentElement,
         getTimestamp: () => this.#getCurrentSubtitleStartTime(),
+        onCollectFavorite: (wordData) => this.#collectFavoriteWord(wordData),
+        onRemoveFavorite: (wordData) => this.#removeFavoriteWord(wordData),
+        getThemeElement: () =>
+          document.getElementById("kiss-youtube-subtitle-list-container"),
+        t: this.#setting.t,
       });
     }
   }
@@ -262,7 +271,47 @@ export class BilingualSubtitleManager {
    * 为翻译分词后产生的每一个单词标签绑 hover 移入/移出事件
    */
   #attachSpanListeners() {
-    this.#wordTooltipController?.attachSpanListeners(this.#captionWindowEl);
+    const subtitle = this.#formattedSubtitles[this.#currentSubtitleIndex];
+    this.#wordTooltipController?.attachSpanListeners(
+      this.#captionWindowEl,
+      () => this.#getCurrentSubtitleStartTime(),
+      () => ({
+        originalText: subtitle?.text || "",
+        translation: subtitle?.translation || "",
+      })
+    );
+  }
+
+  #getYouTubeVideoId() {
+    return new URLSearchParams(window.location.search).get("v");
+  }
+
+  async #collectFavoriteWord(wordData) {
+    const videoId = this.#getYouTubeVideoId();
+    if (!videoId) return { saved: false, videoCount: 0 };
+    const result = await saveFavoriteWord({
+      word: wordData.word,
+      phonetic: wordData.phonetic,
+      definition: wordData.definition,
+      examples: wordData.examples,
+      occurrence: {
+        sourceType: "youtube",
+        videoId,
+        videoTitle: this.#setting.docInfo?.title || "YouTube Video",
+        sourceUrl: `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+        timestamp: wordData.timestamp ?? 0,
+        originalText: wordData.originalText || "",
+        translation: wordData.translation || "",
+      },
+    });
+    return { saved: true, videoCount: result.videoCount || 0 };
+  }
+
+  async #removeFavoriteWord(wordData) {
+    const videoId = this.#getYouTubeVideoId();
+    if (!videoId) return { saved: false, videoCount: 0 };
+    const result = await removeFavoriteOccurrence(wordData.word, videoId);
+    return { saved: false, videoCount: result.videoCount || 0 };
   }
 
   /**

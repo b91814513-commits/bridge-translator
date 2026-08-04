@@ -1,6 +1,14 @@
 import { BilingualSubtitleManager } from "./BilingualSubtitleManager";
 import { apiTranslate } from "../apis/index.js";
 
+const mockSaveFavoriteWord = jest.fn();
+const mockRemoveFavoriteOccurrence = jest.fn();
+
+jest.mock("../libs/favWords.js", () => ({
+  saveFavoriteWord: (...args) => mockSaveFavoriteWord(...args),
+  removeFavoriteOccurrence: (...args) => mockRemoveFavoriteOccurrence(...args),
+}));
+
 jest.mock("../apis/index.js", () => ({
   apiTranslate: jest.fn(),
   apiMicrosoftDict: jest.fn(),
@@ -112,6 +120,11 @@ async function waitForMutationObserver() {
 describe("BilingualSubtitleManager", () => {
   beforeEach(() => {
     apiTranslate.mockReset();
+    mockSaveFavoriteWord.mockReset();
+    mockSaveFavoriteWord.mockResolvedValue({ videoCount: 1 });
+    mockRemoveFavoriteOccurrence.mockReset();
+    mockRemoveFavoriteOccurrence.mockResolvedValue({ videoCount: 0 });
+    window.history.replaceState({}, "", "/watch?v=test-video");
   });
 
   test("renders original subtitle before translation by default", () => {
@@ -143,6 +156,52 @@ describe("BilingualSubtitleManager", () => {
         (node) => node.textContent
       )
     ).toEqual(["hello", "world"]);
+    manager.destroy();
+  });
+
+  test("collects a clicked overlay subtitle word with its current context", async () => {
+    const videoEl = createVideoElement();
+    const manager = new BilingualSubtitleManager({
+      videoEl,
+      formattedSubtitles: [
+        {
+          ...subtitle,
+          start: 33000,
+          end: 34000,
+          translation: "浣犲ソ涓栫晫",
+        },
+      ],
+      setting: {
+        ...setting,
+        hoverLookupMode: "on",
+        docInfo: { title: "Test lesson" },
+      },
+    });
+
+    videoEl.currentTime = 33;
+    manager.start();
+    document
+      .querySelector(".kiss-subtitle-word")
+      .dispatchEvent(new Event("click", { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockSaveFavoriteWord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        word: "hello",
+        occurrence: expect.objectContaining({
+          videoId: "test-video",
+          videoTitle: "Test lesson",
+          timestamp: 33000,
+          originalText: "hello world",
+          translation: "浣犲ソ涓栫晫",
+        }),
+      })
+    );
+    expect(document.querySelector(".kiss-word-toast")).not.toBeNull();
+
     manager.destroy();
   });
 

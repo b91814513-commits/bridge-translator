@@ -4,6 +4,14 @@ import { buildBilingualVtt } from "./vtt.js";
 import { getSettingWithDefault } from "../libs/storage.js";
 import { trustedTypesHelper } from "../libs/trustedTypes.js";
 import {
+  getFavoriteWords,
+  getVideoFavoriteEntries,
+  hasFavoriteOccurrence,
+  removeFavoriteOccurrence,
+  saveFavoriteWord,
+  subscribeFavoriteWords,
+} from "../libs/favWords.js";
+import {
   addWordHoverStyles,
   WordTooltipController,
   wrapWordsWithSpans,
@@ -15,14 +23,46 @@ import {
   parseVideoSummaryResponse,
 } from "../libs/videoSummary.js";
 
+const LIGHT_THEME_VARS = {
+  "--kt-bg": "rgba(255, 240, 245, 0.92)",
+  "--kt-border": "1px solid rgba(236, 64, 122, 0.15)",
+  "--kt-text": "#37474F",
+  "--kt-subtext": "#607D8B",
+  "--kt-primary": "#EC407A",
+  "--kt-time-bg": "rgba(236, 64, 122, 0.1)",
+  "--kt-divider": "rgba(244, 143, 177, 0.25)",
+  "--kt-active-bg": "rgba(236, 64, 122, 0.1)",
+  "--kt-btn-bg": "var(--kt-primary)",
+  "--kt-btn-color": "white",
+  "--kt-btn-border": "none",
+  "--kt-btn-hover-bg": "rgba(236, 64, 122, 0.85)",
+  "--kt-primary-contrast": "white",
+};
+
+const DARK_THEME_VARS = {
+  "--kt-bg": "rgba(18,18,18,0.85)",
+  "--kt-border": "1px solid rgba(255, 255, 255, 0.06)",
+  "--kt-text": "#e6e6e6",
+  "--kt-subtext": "#bdbdbd",
+  "--kt-primary": "#90caf9",
+  "--kt-time-bg": "rgba(144,202,249,0.08)",
+  "--kt-divider": "rgba(255,255,255,0.06)",
+  "--kt-active-bg": "rgba(144,202,249,0.12)",
+  "--kt-btn-bg": "linear-gradient(180deg,#0f0f0f,#1b1b1b)",
+  "--kt-btn-color": "#e6e6e6",
+  "--kt-btn-border": "1px solid rgba(255,255,255,0.04)",
+  "--kt-btn-hover-bg": "linear-gradient(180deg,#141414,#262626)",
+  "--kt-primary-contrast": "#102027",
+};
+
 /**
  * YouTube 字幕列表管理器
  *
  * 主要职责与功能：
  * 1. 负责在 YouTube 原生播放器的右侧/下方“次要推荐内容栏”中动态挂载和管理一个自适应暗黑/浅色主题的双语字幕滚动列表面板。
  * 2. 监听视频播放器的 timeupdate，在 ASR/手动字幕播放时计算高亮并自适应居中滚动对齐（基于 O(log N) 二分搜索）。
- * 3. 拦截鼠标 hover/划词事件广播，实现增量生词本收录功能。
- * 4. 支持将收录的生词以 JSON、CSV（带 Excel BOM 字符防乱码）、纯文本、Markdown 格式导出及下载。
+ * 3. 支持字幕单词 hover 查词，以及用户明确收藏后的上下文词汇管理。
+ * 4. 生词持久化到全局词汇库，并支持按当前视频筛选与导出。
  */
 export class YouTubeSubtitleList {
   /**
@@ -44,12 +84,15 @@ export class YouTubeSubtitleList {
     // 双语字幕主列表数组。结构：{ start: number, end: number, text: string, translation: string }
     this.bilingualSubtitles = [];
     this.rawSubtitleEvents = [];
-    // 生词本收录数组。结构：{ word, phonetic, definition, examples: [], timestamp }
+    this.favoriteWords = {};
+    this._favoriteWordsChangedSinceLoad = false;
+    // 当前视频生词数组，由全局词汇库按 videoId 派生。
     this.vocabulary = [];
 
     // --- DOM 节点引用缓存 ---
     this.container = null; // 右侧字幕/生词面板的最外层根容器节点
     this.subtitleTabEl = null; // 字幕 Tab 按钮引用，用于随处理进度刷新标题文案
+    this.vocabularyTabEl = null;
     this.subtitleListEl = null; // 字幕列表面板的 DOM 引用
     this.vocabularyListEl = null; // 生词本面板的 DOM 引用
     this.videoSummaryEl = null; // 视频总结面板的 DOM 引用
@@ -88,7 +131,6 @@ export class YouTubeSubtitleList {
     this._videoSummaryRawText = ""; // AI 返回的原始总结文本
 
     // --- 交互事件句柄绑定 ---
-    this.handleWordAdded = this.handleWordAdded.bind(this);
     this.handleJumpMessage = this.handleJumpMessage.bind(this);
     this.handleSubtitleScroll = this.handleSubtitleScroll.bind(this);
     this.handleContainerMouseEnter = this.handleContainerMouseEnter.bind(this);
@@ -97,17 +139,39 @@ export class YouTubeSubtitleList {
     this.handleVideoPause = this.handleVideoPause.bind(this);
     this.handleVideoPlay = this.handleVideoPlay.bind(this);
     this.handleWindowResize = this.handleWindowResize.bind(this);
-    // 监听在视频字幕上 hover 或划词翻译触发后，弹窗模块向外广播的自定义 "kiss-add-word" 事件
-    document.addEventListener("kiss-add-word", this.handleWordAdded);
-
     // 监听来自扩展配置选项页面等第三方发送的消息，用以点击生词时同步跳转视频进度
     window.addEventListener("message", this.handleJumpMessage);
+
+    this._favoriteWordsUnsubscribe = subscribeFavoriteWords((words) =>
+      this._applyFavoriteWords(words, true)
+    );
+    getFavoriteWords()
+      .then((words) => {
+        if (!this._favoriteWordsChangedSinceLoad) {
+          this._applyFavoriteWords(words);
+        }
+      })
+      .catch((error) => logger.info("Load favorite words failed:", error));
 
     if (this.enableHoverLookup) {
       addWordHoverStyles();
       this._wordTooltipController = new WordTooltipController({
         getVideoContainer: () => this._getPlayerElement(),
         getTimestamp: () => this.videoEl.currentTime * 1000,
+        onToggleFavorite: (wordData) =>
+          this._toggleFavoriteFromTooltip(wordData),
+        onCollectFavorite: (wordData) =>
+          this._collectFavoriteFromTooltip(wordData),
+        onRemoveFavorite: (wordData) =>
+          this._removeFavoriteFromTooltip(wordData),
+        isFavorite: (word) =>
+          hasFavoriteOccurrence(
+            this.favoriteWords,
+            word,
+            this._getYouTubeVideoId()
+          ),
+        getThemeElement: () => this.container,
+        t: (key, fallback) => this._t(key, fallback),
       });
     }
   }
@@ -251,7 +315,8 @@ export class YouTubeSubtitleList {
     this._playerSizeListenerAttached = false;
     this._wordTooltipController?.destroy();
     this._wordTooltipController = null;
-    document.removeEventListener("kiss-add-word", this.handleWordAdded);
+    this._favoriteWordsUnsubscribe?.();
+    this._favoriteWordsUnsubscribe = null;
     window.removeEventListener("message", this.handleJumpMessage);
     if (this.container) {
       this.container.remove();
@@ -259,6 +324,7 @@ export class YouTubeSubtitleList {
     }
     window.__kissYouTubeSubtitleList = null;
     this.subtitleTabEl = null;
+    this.vocabularyTabEl = null;
     this.subtitleListEl = null;
     this.vocabularyListEl = null;
     this.videoSummaryEl = null;
@@ -587,58 +653,74 @@ export class YouTubeSubtitleList {
     }
   }
 
-  /**
-   * 查词自定义事件响应句柄
-   */
-  handleWordAdded(event) {
-    if (event.detail && event.detail.word) {
-      this.addWord(
-        event.detail.word,
-        event.detail.phonetic || "",
-        event.detail.definition || "",
-        event.detail.examples || [],
-        event.detail.timestamp || null
-      );
-    }
-  }
-
-  /**
-   * 追加或者合并更新一个生词数据到内存中，并依视口 Tab 活跃状态决策重绘
-   */
-  addWord(
-    word,
-    phonetic = "",
-    definition = "",
-    examples = [],
-    timestamp = null
-  ) {
-    if (!word) return;
-
-    // 根据拼写检索该词汇是否已经收录过
-    const existingIndex = this.vocabulary.findIndex(
-      (item) => item.word === word
+  _applyFavoriteWords(words, fromSubscription = false) {
+    if (fromSubscription) this._favoriteWordsChangedSinceLoad = true;
+    this.favoriteWords = words || {};
+    const videoId = this._getYouTubeVideoId();
+    this.vocabulary = getVideoFavoriteEntries(this.favoriteWords, videoId).map(
+      ([, entry]) => ({
+        word: entry.word,
+        phonetic: entry.phonetic || "",
+        definition: entry.definition || "",
+        examples: entry.examples || [],
+        ...entry.occurrence,
+      })
     );
-
-    if (existingIndex !== -1) {
-      // 若已收录，将可能缺失的信息（如音标、新例句等）进行 Diff 合并补齐
-      const currentItem = this.vocabulary[existingIndex];
-      if (phonetic) currentItem.phonetic = phonetic;
-      if (definition) currentItem.definition = definition;
-      if (examples.length > 0) currentItem.examples = examples;
-      if (timestamp) currentItem.timestamp = timestamp;
-    } else {
-      // 否则，新添一条生词本数据记录
-      this.vocabulary.push({ word, phonetic, definition, examples, timestamp });
-    }
-
-    // 惰性重绘优化：
-    // 若生词本 Tab 正被展示在前台，则立即重新执行生词本渲染以给用户直观反馈；
-    // 若当前在前台显示的是字幕 Tab，则仅将 dirty 标志置为 true，直到用户主动点击切换 Tab 时才做渲染重绘。
-    if (this.activeTab === "vocabulary") {
+    this._updateVocabularyTabLabel();
+    if (this.activeTab === "vocabulary" && this.vocabularyListEl) {
       this._renderVocabulary();
+      this._vocabularyDirty = false;
     } else {
       this._vocabularyDirty = true;
     }
+  }
+
+  _updateVocabularyTabLabel() {
+    if (!this.vocabularyTabEl) return;
+    const label = this._t("vocabulary_book", "生词本");
+    this.vocabularyTabEl.textContent = this.vocabulary.length
+      ? `${label} (${this.vocabulary.length})`
+      : label;
+  }
+
+  async _toggleFavoriteFromTooltip(wordData) {
+    const videoId = this._getYouTubeVideoId();
+    if (!videoId) return { saved: false, videoCount: 0 };
+
+    if (hasFavoriteOccurrence(this.favoriteWords, wordData.word, videoId)) {
+      return this._removeFavoriteFromTooltip(wordData);
+    }
+
+    return this._collectFavoriteFromTooltip(wordData);
+  }
+
+  async _collectFavoriteFromTooltip(wordData) {
+    const videoId = this._getYouTubeVideoId();
+    if (!videoId) return { saved: false, videoCount: 0 };
+
+    const result = await saveFavoriteWord({
+      word: wordData.word,
+      phonetic: wordData.phonetic,
+      definition: wordData.definition,
+      examples: wordData.examples,
+      occurrence: {
+        sourceType: "youtube",
+        videoId,
+        videoTitle: this._getYouTubeVideoTitle(),
+        sourceUrl: `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+        timestamp: wordData.timestamp ?? 0,
+        originalText: wordData.originalText || "",
+        translation: wordData.translation || "",
+      },
+    });
+    return { saved: true, videoCount: result.videoCount || 0 };
+  }
+
+  async _removeFavoriteFromTooltip(wordData) {
+    const videoId = this._getYouTubeVideoId();
+    if (!videoId) return { saved: false, videoCount: 0 };
+    const result = await removeFavoriteOccurrence(wordData.word, videoId);
+    return { saved: false, videoCount: result.videoCount || 0 };
   }
 
   /**
@@ -716,10 +798,14 @@ export class YouTubeSubtitleList {
    * 确保挂载主容器，并利用 CSS 变量系统自适应适配 YouTube 原生页面的 Dark/Light 偏好
    */
   _ensureContainer() {
-    this.container = document.getElementById(
+    const existingContainer = document.getElementById(
       "kiss-youtube-subtitle-list-container"
     );
-    if (!this.container) {
+    if (existingContainer && existingContainer !== this.container) {
+      existingContainer.remove();
+    }
+
+    if (!this.container || !this.container.isConnected) {
       this.container = document.createElement("div");
       this.container.id = "kiss-youtube-subtitle-list-container";
       this.container.className = "notranslate"; // 规避被其他第三方整页翻译插件二次重画
@@ -748,60 +834,40 @@ export class YouTubeSubtitleList {
       // 挂载到右侧推荐流栏的头部
       const secondary = document.getElementById("secondary-inner");
       if (secondary) secondary.prepend(this.container);
-
-      // 自适应主题：异步加载用户暗黑模式偏好，并嗅探原生系统的 prefers-color-scheme，写入对应的全局 CSS 变量系统
-      (async () => {
-        try {
-          const setting = await getSettingWithDefault();
-          const darkMode = setting?.darkMode;
-          const prefersDark =
-            typeof window.matchMedia === "function" &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches;
-          const isDark =
-            darkMode === "dark" || (darkMode === "auto" && prefersDark);
-
-          const lightVars = {
-            "--kt-bg": "rgba(255, 240, 245, 0.92)",
-            "--kt-border": "1px solid rgba(236, 64, 122, 0.15)",
-            "--kt-text": "#37474F",
-            "--kt-subtext": "#607D8B",
-            "--kt-primary": "#EC407A",
-            "--kt-time-bg": "rgba(236, 64, 122, 0.1)",
-            "--kt-divider": "rgba(244, 143, 177, 0.25)",
-            "--kt-active-bg": "rgba(236, 64, 122, 0.1)",
-            "--kt-btn-bg": "var(--kt-primary)",
-            "--kt-btn-color": "white",
-            "--kt-btn-border": "none",
-            "--kt-btn-hover-bg": "rgba(236, 64, 122, 0.85)",
-          };
-
-          const darkVars = {
-            "--kt-bg": "rgba(18,18,18,0.85)",
-            "--kt-border": "1px solid rgba(255, 255, 255, 0.06)",
-            "--kt-text": "#e6e6e6",
-            "--kt-subtext": "#bdbdbd",
-            "--kt-primary": "#90caf9",
-            "--kt-time-bg": "rgba(144,202,249,0.08)",
-            "--kt-divider": "rgba(255,255,255,0.06)",
-            "--kt-active-bg": "rgba(144,202,249,0.12)",
-            "--kt-btn-bg": "linear-gradient(180deg,#0f0f0f,#1b1b1b)",
-            "--kt-btn-color": "#e6e6e6",
-            "--kt-btn-border": "1px solid rgba(255,255,255,0.04)",
-            "--kt-btn-hover-bg": "linear-gradient(180deg,#141414,#262626)",
-          };
-
-          const vars = isDark ? darkVars : lightVars;
-          Object.keys(vars).forEach((k) =>
-            this.container.style.setProperty(k, vars[k])
-          );
-        } catch (err) {
-          logger.info("failed to apply subtitle list theme vars", err);
-        }
-      })();
     }
+
+    // Inline controls depend on these custom properties. Set a complete
+    // fallback synchronously so delayed settings cannot expose browser UI.
+    const container = this.container;
+    this._applyThemeVars(LIGHT_THEME_VARS);
+
+    // Resolve the user's preferred theme after the safe fallback is visible.
+    (async () => {
+      try {
+        const setting = await getSettingWithDefault();
+        const darkMode = setting?.darkMode;
+        const prefersDark =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const isDark =
+          darkMode === "dark" || (darkMode === "auto" && prefersDark);
+        if (this.container === container && container.isConnected) {
+          this._applyThemeVars(isDark ? DARK_THEME_VARS : LIGHT_THEME_VARS);
+        }
+      } catch (err) {
+        logger.info("failed to apply subtitle list theme vars", err);
+      }
+    })();
 
     this._syncContainerHeightToPlayer();
     this._observePlayerSize();
+  }
+
+  _applyThemeVars(vars) {
+    if (!this.container) return;
+    Object.entries(vars).forEach(([key, value]) => {
+      this.container.style.setProperty(key, value);
+    });
   }
 
   _getPlayerElement() {
@@ -846,7 +912,8 @@ export class YouTubeSubtitleList {
     this.subtitleTabEl = subtitleTab;
     this._updateSubtitleTabLabel();
     const vocabularyTab = document.createElement("button");
-    vocabularyTab.textContent = this._t("vocabulary_book", "生词本");
+    this.vocabularyTabEl = vocabularyTab;
+    this._updateVocabularyTabLabel();
     const videoSummaryTab = document.createElement("button");
     videoSummaryTab.textContent = this._t("tab_video_summary", "视频总结");
 
@@ -1079,7 +1146,11 @@ export class YouTubeSubtitleList {
       );
       this._wordTooltipController?.attachSpanListeners(
         textSpan,
-        () => sub.start
+        () => sub.start,
+        () => ({
+          originalText: sub.text || "",
+          translation: sub.translation || "",
+        })
       );
     } else {
       textSpan.textContent = sub.text || "";
@@ -1201,34 +1272,45 @@ export class YouTubeSubtitleList {
    */
   _createExportContainer() {
     const exportContainer = document.createElement("div");
-    exportContainer.style.cssText = `padding: 10px 16px; border-bottom: 1px solid var(--kt-divider); display: flex; justify-content: center; flex-shrink: 0; gap: 8px;`;
+    exportContainer.style.cssText = `padding: 10px 16px; border-bottom: 1px solid var(--kt-divider); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; gap: 8px;`;
 
-    // 如果生词本不为空，显示格式导出按钮
     if (this.vocabulary.length > 0) {
-      const createBtn = (text, handler) => {
-        const btn = document.createElement("button");
-        btn.textContent = text;
-        btn.style.cssText = `padding: 6px 12px; background: var(--kt-primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;`;
-        if (handler) btn.addEventListener("click", handler.bind(this));
-        return btn;
-      };
+      const count = document.createElement("span");
+      count.textContent = `${this.vocabulary.length} ${this._t("vocabulary_count_unit", "个")}`;
+      count.style.cssText = `color: var(--kt-subtext); font-size: 12px;`;
 
-      exportContainer.appendChild(
-        createBtn("导出JSON", this.exportVocabularyAsJson)
-      );
-      exportContainer.appendChild(
-        createBtn("导出CSV", this.exportVocabularyAsCsv)
-      );
-      exportContainer.appendChild(
-        createBtn("导出TXT", this.exportVocabularyAsTxt)
-      );
-      exportContainer.appendChild(
-        createBtn("导出MD", this.exportVocabularyAsMd)
-      );
+      const exportGroup = document.createElement("div");
+      exportGroup.style.cssText = `display: flex; align-items: center; gap: 6px;`;
+      const formatSelect = document.createElement("select");
+      formatSelect.title = this._t("export_format", "导出格式");
+      formatSelect.style.cssText = `height: 30px; padding: 0 7px; color: var(--kt-text); background: var(--kt-bg); border: 1px solid var(--kt-divider); border-radius: 4px; font-size: 12px;`;
+      ["JSON", "CSV", "TXT", "MD"].forEach((format) => {
+        const option = document.createElement("option");
+        option.value = format.toLowerCase();
+        option.textContent = format;
+        formatSelect.appendChild(option);
+      });
+      const exportBtn = document.createElement("button");
+      exportBtn.type = "button";
+      exportBtn.textContent = `↓ ${this._t("export", "导出")}`;
+      exportBtn.style.cssText = `height: 30px; padding: 0 10px; background: var(--kt-primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;`;
+      exportBtn.addEventListener("click", () => {
+        const handlers = {
+          json: this.exportVocabularyAsJson,
+          csv: this.exportVocabularyAsCsv,
+          txt: this.exportVocabularyAsTxt,
+          md: this.exportVocabularyAsMd,
+        };
+        handlers[formatSelect.value]?.call(this);
+      });
+      exportGroup.append(formatSelect, exportBtn);
+      exportContainer.append(count, exportGroup);
     } else {
-      // 提示暂无生词
       const emptyTip = document.createElement("span");
-      emptyTip.textContent = "暂无生词，在字幕中添加";
+      emptyTip.textContent = this._t(
+        "vocabulary_empty_youtube",
+        "暂无生词，可在字幕查词后收藏"
+      );
       emptyTip.style.color = "var(--kt-subtext)";
       emptyTip.style.fontSize = "12px";
       exportContainer.appendChild(emptyTip);
@@ -1279,7 +1361,7 @@ export class YouTubeSubtitleList {
       wordLine.appendChild(phEl);
     }
 
-    if (item.timestamp) {
+    if (Number.isFinite(item.timestamp)) {
       // 记录了添加该生词时对应的视频时间戳，支持点击跳转至该处重听，方便磨耳朵记词
       const tsBtn = document.createElement("button");
       tsBtn.textContent = `${this.millisToMinutesAndSeconds(item.timestamp)}`;
@@ -1287,6 +1369,25 @@ export class YouTubeSubtitleList {
       tsBtn.addEventListener("click", () => this.jumpToTime(item.timestamp));
       wordLine.appendChild(tsBtn);
     }
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.textContent = "×";
+    removeBtn.title = this._t(
+      "remove_from_video_vocabulary",
+      "从本视频生词本移除"
+    );
+    removeBtn.style.cssText = `margin-left: auto; width: 28px; height: 28px; padding: 0; color: var(--kt-subtext); background: transparent; border: 1px solid transparent; border-radius: 4px; cursor: pointer; font-size: 18px; line-height: 1;`;
+    removeBtn.addEventListener("click", async () => {
+      removeBtn.disabled = true;
+      try {
+        await removeFavoriteOccurrence(item.word, this._getYouTubeVideoId());
+      } catch (error) {
+        logger.info("Remove favorite word failed:", error);
+        removeBtn.disabled = false;
+      }
+    });
+    wordLine.appendChild(removeBtn);
     vocabItem.appendChild(wordLine);
 
     // 2. 词典中文释义
@@ -1295,6 +1396,21 @@ export class YouTubeSubtitleList {
       defEl.textContent = item.definition;
       defEl.style.cssText = `color: var(--kt-text); margin: 8px 0; font-size: 14px; line-height: 1.4;`;
       vocabItem.appendChild(defEl);
+    }
+
+    if (item.originalText) {
+      const contextEl = document.createElement("div");
+      contextEl.style.cssText = `margin: 10px 0; padding-left: 10px; border-left: 2px solid var(--kt-primary); color: var(--kt-text); font-size: 13px; line-height: 1.5;`;
+      const originalEl = document.createElement("div");
+      originalEl.textContent = item.originalText;
+      contextEl.appendChild(originalEl);
+      if (item.translation) {
+        const translationEl = document.createElement("div");
+        translationEl.textContent = item.translation;
+        translationEl.style.cssText = `margin-top: 3px; color: var(--kt-subtext);`;
+        contextEl.appendChild(translationEl);
+      }
+      vocabItem.appendChild(contextEl);
     }
 
     // 3. 例句展示
@@ -1361,7 +1477,7 @@ export class YouTubeSubtitleList {
     if (this.vocabulary.length === 0) return;
     const videoId = this._getYouTubeVideoId();
     const header =
-      "Word,Phonetic,Definition,Example1,Translation1,Example2,Translation2,Video Link";
+      "Word,Phonetic,Definition,Original Context,Context Translation,Example1,Translation1,Example2,Translation2,Video Link";
 
     const rows = this.vocabulary.map((item) => {
       const escapeCSVField = (field) => {
@@ -1376,7 +1492,7 @@ export class YouTubeSubtitleList {
       const ex2 = item.examples?.[1];
 
       let videoLink = "";
-      if (item.timestamp && videoId) {
+      if (Number.isFinite(item.timestamp) && videoId) {
         // 拼接带秒数参数 (t=xx) 的 YouTube 回放进度链接
         videoLink = `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(item.timestamp / 1000)}s`;
       }
@@ -1385,6 +1501,8 @@ export class YouTubeSubtitleList {
         item.word,
         phonetic,
         item.definition,
+        item.originalText,
+        item.translation,
         ex1?.eng || "",
         ex1?.chs || "",
         ex2?.eng || "",
@@ -1398,9 +1516,9 @@ export class YouTubeSubtitleList {
     // 关键修正：在 CSV 文本头部硬性追加 UTF-8 BOM 字符 "\uFEFF"，
     // 使得导出的中文 CSV 文件在 Windows 版 Microsoft Excel 双击直接打开时能够被正确识别编码，彻底告别乱码。
     const csvContent = [
-      `"${this._getYouTubeVideoTitle()}",,,,,,,`,
-      `"${videoId ? `https://www.youtube.com/watch?v=${videoId}` : "生词本"}",,,,,,,`,
-      `,,,,,,,,`,
+      `"${this._getYouTubeVideoTitle()}",,,,,,,,,`,
+      `"${videoId ? `https://www.youtube.com/watch?v=${videoId}` : "生词本"}",,,,,,,,,`,
+      `,,,,,,,,,,`,
       header,
       ...rows,
     ].join("\n");
@@ -1426,6 +1544,8 @@ export class YouTubeSubtitleList {
       const cleanPhonetic = item.phonetic;
       if (cleanPhonetic) lines.push(`   音标: [${cleanPhonetic}]`);
       if (item.definition) lines.push(`   释义: ${item.definition}`);
+      if (item.originalText) lines.push(`   原句: ${item.originalText}`);
+      if (item.translation) lines.push(`   译文: ${item.translation}`);
 
       if (item.examples && item.examples.length > 0) {
         lines.push("   例句:");
@@ -1434,7 +1554,7 @@ export class YouTubeSubtitleList {
           if (ex.chs) lines.push(`      ${ex.chs}`);
         });
       }
-      if (item.timestamp && videoId) {
+      if (Number.isFinite(item.timestamp) && videoId) {
         lines.push(
           `   视频链接: https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(item.timestamp / 1000)}s`
         );
@@ -1466,6 +1586,10 @@ export class YouTubeSubtitleList {
       if (cleanPhonetic) lines.push(`   *音标 Phonetic:* [${cleanPhonetic}]`);
       if (item.definition)
         lines.push(`   *释义 Definition:* ${item.definition}`);
+      if (item.originalText)
+        lines.push(`   *原句 Context:* ${item.originalText}`);
+      if (item.translation)
+        lines.push(`   *译文 Translation:* ${item.translation}`);
 
       if (item.examples && item.examples.length > 0) {
         lines.push("   *例句 Examples:*");
@@ -1474,7 +1598,7 @@ export class YouTubeSubtitleList {
           if (ex.chs) lines.push(`      ${ex.chs}`);
         });
       }
-      if (item.timestamp && videoId) {
+      if (Number.isFinite(item.timestamp) && videoId) {
         const link = `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(item.timestamp / 1000)}s`;
         lines.push(`   *视频链接 Video Link:* [跳转到视频时间点](${link})`);
       }
@@ -1509,7 +1633,9 @@ export class YouTubeSubtitleList {
     generateBtn.addEventListener("mouseenter", () => {
       if (this._videoSummaryState !== "loading") {
         try {
-          const hover = getComputedStyle(this.container).getPropertyValue("--kt-btn-hover-bg");
+          const hover = getComputedStyle(this.container).getPropertyValue(
+            "--kt-btn-hover-bg"
+          );
           if (hover) generateBtn.style.background = hover;
           generateBtn.style.transform = "translateY(-1px)";
         } catch (e) {}
@@ -1517,12 +1643,16 @@ export class YouTubeSubtitleList {
     });
     generateBtn.addEventListener("mouseleave", () => {
       try {
-        const normal = getComputedStyle(this.container).getPropertyValue("--kt-btn-bg");
+        const normal = getComputedStyle(this.container).getPropertyValue(
+          "--kt-btn-bg"
+        );
         if (normal) generateBtn.style.background = normal;
         generateBtn.style.transform = "translateY(0)";
       } catch (e) {}
     });
-    generateBtn.addEventListener("click", () => this._handleGenerateVideoSummary());
+    generateBtn.addEventListener("click", () =>
+      this._handleGenerateVideoSummary()
+    );
 
     actionBar.appendChild(generateBtn);
     this.videoSummaryEl.appendChild(actionBar);
@@ -1543,7 +1673,10 @@ export class YouTubeSubtitleList {
       progressBar.appendChild(progressInner);
 
       const loadingText = document.createElement("div");
-      loadingText.textContent = this._t("video_summary_loading", "正在分析视频内容...");
+      loadingText.textContent = this._t(
+        "video_summary_loading",
+        "正在分析视频内容..."
+      );
       loadingText.style.cssText = `color: var(--kt-subtext); font-size: 13px;`;
 
       loadingContainer.appendChild(progressBar);
@@ -1555,18 +1688,25 @@ export class YouTubeSubtitleList {
       errorContainer.style.cssText = `display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; gap: 12px;`;
 
       const errorText = document.createElement("div");
-      errorText.textContent = this._videoSummaryError || this._t("video_summary_error", "生成视频总结失败");
+      errorText.textContent =
+        this._videoSummaryError ||
+        this._t("video_summary_error", "生成视频总结失败");
       errorText.style.cssText = `color: #e57373; font-size: 13px; text-align: center;`;
 
       const retryBtn = document.createElement("button");
       retryBtn.textContent = this._t("video_summary_retry", "重试");
       retryBtn.style.cssText = `padding: 6px 16px; background: var(--kt-primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;`;
-      retryBtn.addEventListener("click", () => this._handleGenerateVideoSummary());
+      retryBtn.addEventListener("click", () =>
+        this._handleGenerateVideoSummary()
+      );
 
       errorContainer.appendChild(errorText);
       errorContainer.appendChild(retryBtn);
       contentArea.appendChild(errorContainer);
-    } else if (this._videoSummaryState === "success" && this._videoSummaryData) {
+    } else if (
+      this._videoSummaryState === "success" &&
+      this._videoSummaryData
+    ) {
       // 成功状态：展示总结内容
       this._renderVideoSummaryContent(contentArea, this._videoSummaryData);
     } else {
@@ -1577,7 +1717,10 @@ export class YouTubeSubtitleList {
       const subtitleCount = this.bilingualSubtitles?.length || 0;
       if (subtitleCount === 0) {
         const noSubtitlesText = document.createElement("div");
-        noSubtitlesText.textContent = this._t("video_summary_no_subtitles", "暂无字幕数据，请先开启双语字幕。");
+        noSubtitlesText.textContent = this._t(
+          "video_summary_no_subtitles",
+          "暂无字幕数据，请先开启双语字幕。"
+        );
         noSubtitlesText.style.cssText = `color: var(--kt-subtext); font-size: 13px; text-align: center;`;
         idleContainer.appendChild(noSubtitlesText);
       } else {
@@ -1659,7 +1802,9 @@ export class YouTubeSubtitleList {
           const timeBtn = document.createElement("button");
           timeBtn.textContent = this.millisToMinutesAndSeconds(sec.startTime);
           timeBtn.style.cssText = `color: var(--kt-primary); background: none; border: none; padding: 0 4px; font-size: 12px; cursor: pointer;`;
-          timeBtn.addEventListener("click", () => this.jumpToTime(sec.startTime));
+          timeBtn.addEventListener("click", () =>
+            this.jumpToTime(sec.startTime)
+          );
           header.appendChild(timeBtn);
         }
 
@@ -1713,7 +1858,10 @@ export class YouTubeSubtitleList {
     const subtitles = collectSubtitleData();
     if (!subtitles || subtitles.length === 0) {
       this._videoSummaryState = "error";
-      this._videoSummaryError = this._t("video_summary_no_subtitles", "暂无字幕数据，请先开启双语字幕。");
+      this._videoSummaryError = this._t(
+        "video_summary_no_subtitles",
+        "暂无字幕数据，请先开启双语字幕。"
+      );
       this._renderVideoSummaryTab();
       return;
     }
@@ -1740,12 +1888,16 @@ export class YouTubeSubtitleList {
         this._videoSummaryState = "success";
       } else {
         this._videoSummaryState = "error";
-        this._videoSummaryError = this._t("video_summary_error", "生成视频总结失败");
+        this._videoSummaryError = this._t(
+          "video_summary_error",
+          "生成视频总结失败"
+        );
       }
     } catch (err) {
       logger.error("Video summary error:", err);
       this._videoSummaryState = "error";
-      this._videoSummaryError = err?.message || this._t("video_summary_error", "生成视频总结失败");
+      this._videoSummaryError =
+        err?.message || this._t("video_summary_error", "生成视频总结失败");
     }
 
     this._renderVideoSummaryTab();
@@ -1964,17 +2116,11 @@ export class YouTubeSubtitleList {
     );
   }
 
-  /**
-   * 格式化时间戳（毫秒）转换为 MM:SS 的短格式字符串
-   * REVIEW: 这里的 seconds 计算公式中：`((millis % 60000) / 1000).toFixed(0)`
-   * 在毫秒数为例如 59600 毫秒（即 59.6 秒）时，toFixed(0) 会将其四舍五入为 60，
-   * 此时本函数的输出格式为类似于 `3:60` 这一错误时间格式，而非期待的 `4:00`。
-   * 推荐的改进方案是对秒数向下取整：`Math.floor((millis % 60000) / 1000)`，或者在四舍五入为 60 时将分钟数加 1。
-   */
+  /** 格式化时间戳（毫秒）为 MM:SS。 */
   millisToMinutesAndSeconds(millis) {
     if (!Number.isFinite(millis)) return "0:00";
     const minutes = Math.floor(millis / 60000);
-    const seconds = ((millis % 60000) / 1000).toFixed(0);
+    const seconds = Math.floor((millis % 60000) / 1000);
     return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
   }
 

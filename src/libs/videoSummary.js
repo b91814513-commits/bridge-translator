@@ -5,22 +5,50 @@
  */
 
 import { BRIDGE_VIDEO_SUMMARY } from "../config/msg.js";
+import { cleanTimedText } from "../subtitle/youtubeSubtitleProcessing.js";
 import { sendBgMsg } from "./msg.js";
 
 /**
- * 收集当前视频的字幕数据（含时间戳）。
- * 从全局 BilingualSubtitleManager 实例获取字幕。
- * @returns {Array<{ start: number, end: number, text: string, translation?: string }>} 字幕数据数组
+ * 将 YouTube json3 原始字幕事件转换为带时间戳的原文字幕条目。
+ * @param {Array<object>} events YouTube 原始字幕事件
+ * @returns {Array<{ start: number, end: number, text: string }>} 原文字幕数据
+ */
+function collectOriginalSubtitleEvents(events) {
+  if (!Array.isArray(events)) return [];
+
+  return events
+    .map(({ tStartMs = 0, dDurationMs = 0, segs = [] } = {}) => ({
+      start: tStartMs,
+      end: tStartMs + dDurationMs,
+      text: cleanTimedText(segs.map((seg) => seg?.utf8 || "").join("")),
+    }))
+    .filter((subtitle) => subtitle.text);
+}
+
+/**
+ * 收集当前视频的原始字幕数据（含时间戳）。
+ * 优先使用完整的 YouTube 原始字幕事件，不依赖字幕翻译进度。
+ * @returns {Array<{ start: number, end: number, text: string }>} 字幕数据数组
  */
 export function collectSubtitleData() {
-  // 尝试从全局 YouTubeSubtitleList 实例获取字幕
   const manager = window.__kissYouTubeSubtitleList;
-  if (manager && Array.isArray(manager.bilingualSubtitles) && manager.bilingualSubtitles.length > 0) {
+  if (!manager) return [];
+
+  const originalSubtitles = collectOriginalSubtitleEvents(
+    manager.rawSubtitleEvents
+  );
+  if (originalSubtitles.length > 0) {
+    return originalSubtitles;
+  }
+
+  if (
+    Array.isArray(manager.bilingualSubtitles) &&
+    manager.bilingualSubtitles.length > 0
+  ) {
     return manager.bilingualSubtitles.map((sub) => ({
       start: sub.start,
       end: sub.end,
       text: sub.text || "",
-      translation: sub.translation || "",
     }));
   }
 
@@ -48,8 +76,8 @@ function formatTimestamp(millis) {
 
 /**
  * 将字幕数据格式化为提示词输入（带时间戳的字幕文本）。
- * 限制总长度约 12000 字符，避免超出 AI 模型的上下文窗口。
- * @param {Array<{ start: number, end: number, text: string, translation?: string }>} subtitles 字幕数据
+ * 保留完整字幕；超过模型安全长度时由后台视频总结流水线负责分块处理。
+ * @param {Array<{ start: number, end: number, text: string }>} subtitles 字幕数据
  * @returns {string} 格式化后的带时间戳字幕文本
  */
 export function formatSubtitlesForPrompt(subtitles) {
@@ -57,22 +85,12 @@ export function formatSubtitlesForPrompt(subtitles) {
     return "";
   }
 
-  const MAX_LENGTH = 12000;
   const lines = [];
-  let currentLength = 0;
 
   for (const sub of subtitles) {
     const timestamp = formatTimestamp(sub.start);
-    // 优先使用原文，如有翻译也一并附上
-    const text = sub.translation ? `${sub.text} (${sub.translation})` : sub.text;
-    const line = `${timestamp} ${text}`;
-
-    if (currentLength + line.length > MAX_LENGTH) {
-      break;
-    }
-
+    const line = `${timestamp} ${sub.text || ""}`;
     lines.push(line);
-    currentLength += line.length;
   }
 
   return lines.join("\n");

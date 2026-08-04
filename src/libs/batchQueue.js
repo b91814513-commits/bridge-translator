@@ -230,13 +230,13 @@ export const getBatchQueue = (key, taskFn, options) => {
 
 /**
  * 销毁并清除所有活跃的批处理队列
- * // REVIEW: queueMap 内存泄漏隐患。本方法遍历了 queueMap 的所有 value 并调用了 queue.destroy()，
- * // 但并没有调用 `queueMap.clear()` 或从 Map 中删除这些被销毁的 queue 引用。
- * // 导致这些已被 destroy 的 BatchQueue 实例依然驻留在 Map 中，这不仅会产生内存泄漏，
- * // 还可能导致后续相同 key 再次调用 getBatchQueue(key) 时，返回一个已被 destroy 无法正常工作的死实例。
+ * 遍历 queueMap 的所有 value 销毁后，必须清空 queueMap 引用，
+ * 避免已被 destroy 的实例驻留 Map 造成内存泄漏，并防止后续同 key
+ * 再次调用 getBatchQueue(key) 返回已被 destroy 无法工作的死实例。
  */
 export const clearAllBatchQueue = () => {
   for (const queue of queueMap.values()) {
     queue.destroy();
   }
+  queueMap.clear();
 };

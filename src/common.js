@@ -18,7 +18,11 @@ import { extractPageContent, requestWebSummary } from "./libs/webSummary";
 import { showSummaryPopup, hideSummaryPopup } from "./views/Summary";
 import { BRIDGE_SUMMARIZE_TRIGGER } from "./config/msg";
 import { newI18n } from "./config/i18n";
-import { browser, isContextInvalidatedError } from "./libs/browser";
+import {
+  browser,
+  isContextInvalidatedError,
+  isExtContextValid,
+} from "./libs/browser";
 
 /**
  * 油猴脚本特权桥接设置。
@@ -246,12 +250,12 @@ function setupSummaryListener(setting) {
   const uiLang = browser?.i18n?.getUILanguage?.()?.startsWith("zh-TW")
     ? "zh_TW"
     : browser?.i18n?.getUILanguage?.()?.startsWith("zh")
-    ? "zh"
-    : browser?.i18n?.getUILanguage?.()?.startsWith("ja")
-    ? "ja"
-    : browser?.i18n?.getUILanguage?.()?.startsWith("ko")
-    ? "ko"
-    : "en";
+      ? "zh"
+      : browser?.i18n?.getUILanguage?.()?.startsWith("ja")
+        ? "ja"
+        : browser?.i18n?.getUILanguage?.()?.startsWith("ko")
+          ? "ko"
+          : "en";
   const i18n = newI18n(uiLang);
 
   const handleMessage = (message) => {
@@ -350,6 +354,12 @@ export async function run(isUserscript = false) {
     // 扩展模式下优先挂载上下文失效兜底，覆盖后续所有异步调用链
     if (!isUserscript) {
       setupContextInvalidatedGuard(() => managerRef?.stop());
+      if (!isExtContextValid()) {
+        showErr(
+          "扩展已更新或重新加载，请刷新当前页面 (Extension updated, please refresh the page)"
+        );
+        return;
+      }
     }
 
     if (isUserscript) {

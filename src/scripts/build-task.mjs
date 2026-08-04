@@ -5,7 +5,7 @@ import { argv, quote, $ } from "zx";
 if (process.platform === "win32") {
   $.shell = "cmd.exe";
   $.prefix = "";
-  $.quote = quote
+  $.quote = quote;
 }
 
 // 用法: zx src/scripts/build-task.mjs --target=chrome
@@ -20,9 +20,10 @@ if (!target) {
 
 const buildRoot = "build";
 const targetDir = path.join(buildRoot, target);
+const stagingDir = path.join(buildRoot, `.${target}-staging`);
 
 // 辅助：获取构建目录下的文件路径
-const inDest = (file) => path.join(targetDir, file);
+const inDest = (file) => path.join(stagingDir, file);
 
 console.log(chalk.blue(`\n🚀 Starting build task for: ${chalk.bold(target)}`));
 
@@ -56,9 +57,32 @@ async function assertNoPlaceholderEndpoints(dir) {
   }
 }
 
+async function removeStaleOutput(sourceDir, destinationDir) {
+  if (!(await fs.pathExists(destinationDir))) return;
+
+  for (const entry of await fs.readdir(destinationDir, {
+    withFileTypes: true,
+  })) {
+    const destinationPath = path.join(destinationDir, entry.name);
+    const sourcePath = path.join(sourceDir, entry.name);
+
+    if (!(await fs.pathExists(sourcePath))) {
+      await fs.remove(destinationPath);
+    } else if (entry.isDirectory()) {
+      await removeStaleOutput(sourcePath, destinationPath);
+    }
+  }
+}
+
+async function publishBuild(sourceDir, destinationDir) {
+  await fs.ensureDir(destinationDir);
+  await fs.copy(sourceDir, destinationDir, { overwrite: true });
+  await removeStaleOutput(sourceDir, destinationDir);
+}
+
 try {
-  // 1. 【清理】 清空当前目标的构建目录
-  await fs.remove(targetDir);
+  // 1. 【清理】仅清空 staging，保持 Chrome 当前加载的稳定目录可用
+  await fs.remove(stagingDir);
 
   // 2. 【构建】 区分普通构建和特殊构建（如 Edge）
   if (target === "edge") {
@@ -69,13 +93,13 @@ try {
         'Chrome build not found! Please run "pnpm build:chrome" first.'
       );
     }
-    await fs.copy(chromeDir, targetDir);
+    await fs.copy(chromeDir, stagingDir);
     console.log(chalk.green("✅ Copied Chrome build to Edge."));
   } else {
     // 标准 React 构建流程
     const clientEnv = target === "web" ? "userscript" : target;
 
-    process.env.BUILD_PATH = `./${targetDir}`;
+    process.env.BUILD_PATH = `./${stagingDir}`;
     process.env.REACT_APP_CLIENT = clientEnv;
     process.env.FORCE_COLOR = "1";
     process.env.NODE_OPTIONS = [
@@ -118,7 +142,7 @@ try {
     }
 
     // 清理所有残留的 manifest.*.json
-    const files = await fs.readdir(targetDir);
+    const files = await fs.readdir(stagingDir);
     for (const f of files) {
       if (f.startsWith("manifest.") && f !== "manifest.json") {
         await fs.remove(inDest(f));
@@ -131,7 +155,7 @@ try {
   // -----------------------------------------------------------------------
   if (target === "web") {
     // 1. Web 版不需要任何 manifest 文件
-    const filesInDir = await fs.readdir(targetDir);
+    const filesInDir = await fs.readdir(stagingDir);
     for (const f of filesInDir) {
       if (f.startsWith("manifest") && f.endsWith(".json")) {
         await fs.remove(inDest(f));
@@ -151,8 +175,12 @@ try {
   }
 
   // 4. 【校验】 产物中不得包含占位符端点
-  await assertNoPlaceholderEndpoints(targetDir);
+  await assertNoPlaceholderEndpoints(stagingDir);
   console.log(chalk.green("✅ No placeholder endpoints in build output."));
+
+  // 5. 【发布】构建成功后再覆盖稳定目录，避免已加载扩展出现脚本缺失窗口
+  await publishBuild(stagingDir, targetDir);
+  console.log(chalk.green(`✅ Published build output to ${targetDir}.`));
 
   console.log(
     chalk.green(`✅ Build task for [${target}] completed successfully!`)
@@ -160,5 +188,7 @@ try {
 } catch (err) {
   console.error(chalk.red(`\n❌ Build failed for ${target}:`));
   console.error(err);
-  process.exit(1);
+  process.exitCode = 1;
+} finally {
+  await fs.remove(stagingDir);
 }

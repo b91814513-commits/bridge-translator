@@ -1,4 +1,5 @@
 const mockTranslatorManagerStart = jest.fn();
+const mockIsExtContextValid = jest.fn(() => true);
 let mockIsIframe = false;
 
 jest.mock("./config", () => ({
@@ -10,6 +11,12 @@ jest.mock("./libs/storage", () => ({
   getFabWithDefault: jest.fn(),
   getWordsWithDefault: jest.fn(),
   runDataMigration: jest.fn(),
+}));
+
+jest.mock("./libs/browser", () => ({
+  browser: undefined,
+  isContextInvalidatedError: jest.fn(() => false),
+  isExtContextValid: () => mockIsExtContextValid(),
 }));
 
 jest.mock("./libs/iframe", () => ({
@@ -48,6 +55,24 @@ jest.mock("./libs/log", () => ({
 
 jest.mock("./libs/injector", () => ({
   injectInlineJs: jest.fn(),
+}));
+
+jest.mock("./libs/webSummary", () => ({
+  extractPageContent: jest.fn(),
+  requestWebSummary: jest.fn(),
+}));
+
+jest.mock("./views/Summary", () => ({
+  showSummaryPopup: jest.fn(),
+  hideSummaryPopup: jest.fn(),
+}));
+
+jest.mock("./config/msg", () => ({
+  BRIDGE_SUMMARIZE_TRIGGER: "bridge_summarize_trigger",
+}));
+
+jest.mock("./config/i18n", () => ({
+  newI18n: jest.fn(() => jest.fn()),
 }));
 
 jest.mock("./libs/translatorManager", () => ({
@@ -107,6 +132,7 @@ describe("common iframe startup", () => {
       "http://localhost:3000/options.html";
     delete globalThis.unsafeWindow;
     jest.clearAllMocks();
+    mockIsExtContextValid.mockReturnValue(true);
 
     TranslatorManager.mockImplementation(() => ({
       start: mockTranslatorManagerStart,
@@ -200,6 +226,16 @@ describe("common iframe startup", () => {
     expect(TranslatorManager).toHaveBeenCalledTimes(1);
     expect(mockTranslatorManagerStart).toHaveBeenCalledTimes(1);
     expect(runSubtitle).toHaveBeenCalledTimes(1);
+  });
+
+  test("stops before reading settings when extension context is unavailable", async () => {
+    mockIsExtContextValid.mockReturnValue(false);
+
+    await run();
+
+    expect(getSettingWithDefault).not.toHaveBeenCalled();
+    expect(TranslatorManager).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain("扩展已更新或重新加载");
   });
 
   test("starts transbox-only manager for PDF documents", async () => {
@@ -348,7 +384,7 @@ describe("common iframe startup", () => {
 
       expect(injectInlineJs).toHaveBeenCalledTimes(1);
       expect(injectInlineJs.mock.calls[0][1]).toBe(
-        "kiss-translator-options-injector"
+        "bridge-translator-options-injector"
       );
       expectNoNormalUserscriptStartup();
     } finally {
@@ -398,7 +434,7 @@ describe("common iframe startup", () => {
 
       expect(injectInlineJs).toHaveBeenCalledTimes(1);
       expect(injectInlineJs.mock.calls[0][1]).toBe(
-        "kiss-translator-options-injector"
+        "bridge-translator-options-injector"
       );
       expectNoNormalUserscriptStartup();
     } finally {
@@ -418,7 +454,7 @@ describe("common iframe startup", () => {
 
       expect(injectInlineJs).toHaveBeenCalledTimes(1);
       expect(injectInlineJs.mock.calls[0][1]).toBe(
-        "kiss-translator-options-injector"
+        "bridge-translator-options-injector"
       );
       expectNoNormalUserscriptStartup();
     } finally {
@@ -438,7 +474,7 @@ describe("common iframe startup", () => {
 
       expect(injectInlineJs).toHaveBeenCalledTimes(1);
       expect(injectInlineJs.mock.calls[0][1]).toBe(
-        "kiss-translator-options-injector"
+        "bridge-translator-options-injector"
       );
       expectNoNormalUserscriptStartup();
     } finally {

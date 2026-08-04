@@ -20,7 +20,7 @@ import {
   newI18n,
 } from "../config";
 import { resolveApiPromptSettings } from "../config/prompt";
-import { interpreter } from "./interpreter";
+import { interpreter, createHookInterpreter } from "./interpreter";
 import { clearFetchPool } from "./pool";
 import { debounce, scheduleIdle, genEventName, parseAITerms } from "./utils";
 import { escapeHTML } from "./html";
@@ -2183,14 +2183,12 @@ export class Translator {
       }
 
       // 翻译完成钩子函数（在隔离沙盒内安全执行用户自定义的译后处理脚本）
-      // REVIEW: 共享 Sval 实例导致 Hook 竞态条件 (Race Condition) 隐患。
-      // 由于 interpreter 是全局单例，当页面中同时有多个并发的 translateNodeGroup 任务异步执行时，
-      // 同步运行的 `interpreter.run('exports.transEndHook = ...')` 会直接覆盖上一个任务尚未执行完毕的 exports.transEndHook 引用。
-      // 这可能导致后一个任务的 Hook 函数被错误地执行多次，或者前一个任务执行了不匹配的、新覆盖的 Hook 函数，出现非预期的运行时状态混乱。
+      // 必须为每次 Hook 执行创建独立的 Sval 解释器实例，避免全局共享实例被并发任务互相覆盖。
       if (transEndHook?.trim()) {
         try {
-          interpreter.run(`exports.transEndHook = ${transEndHook}`);
-          interpreter.exports.transEndHook(
+          const hookInterpreter = createHookInterpreter();
+          hookInterpreter.run(`exports.transEndHook = ${transEndHook}`);
+          hookInterpreter.exports.transEndHook(
             {
               hostNode,
               parentNode,
@@ -2604,14 +2602,12 @@ overflow-wrap: anywhere !important;`;
     };
 
     // 翻译开始钩子函数（允许用户在翻译请求发送前修改文本、语言或词典配置）
-    // REVIEW: 共享 Sval 实例导致 Hook 竞态条件 (Race Condition) 隐患。
-    // 由于 interpreter 是全局单例，当短时间内有多个并发的 translateFetch 触发时，
-    // 同步执行的 `interpreter.run('exports.transStartHook = ...')` 会直接覆盖上一个翻译请求的 exports.transStartHook。
-    // 这可能导致先前发起的、仍在执行准备阶段的请求，在调用 transStartHook 时执行成了后一个翻译源的钩子逻辑。
+    // 必须为每次 Hook 执行创建独立的 Sval 解释器实例，避免全局共享实例被并发任务互相覆盖。
     if (transStartHook?.trim()) {
       try {
-        interpreter.run(`exports.transStartHook = ${transStartHook}`);
-        const hookResult = interpreter.exports.transStartHook({
+        const hookInterpreter = createHookInterpreter();
+        hookInterpreter.run(`exports.transStartHook = ${transStartHook}`);
+        const hookResult = hookInterpreter.exports.transStartHook({
           ...args,
           apisMap,
         });

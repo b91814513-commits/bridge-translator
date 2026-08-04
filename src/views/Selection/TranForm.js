@@ -86,16 +86,6 @@ export default function TranForm({
     input.setSelectionRange(len, len);
   }, []);
 
-  // 监听划词/输入文本，如果是合法的英文单词，则分发自定义事件，便于其他监听器(如生词本系统)感知新单词
-  useEffect(() => {
-    if (isValidWord(text)) {
-      const event = new CustomEvent("kiss-add-word", {
-        detail: { word: text },
-      });
-      document.dispatchEvent(event);
-    }
-  }, [text]);
-
   // 同步外层传入的 API 启用列表状态
   useEffect(() => {
     if (!hasUserChangedApiSlugs) {

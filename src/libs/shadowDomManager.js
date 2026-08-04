@@ -38,11 +38,8 @@ export default class ShadowDomManager {
 
   /**
    * 显示组件
-   * // REVIEW: 热更新 props 失效漏洞。
-   * // 如果组件当前已被挂载且处于隐藏状态，此时调用 `show(props)` 并传入了新的 props，
-   * // 由于 `this.#hostElement` 已经存在，执行流会直接跳过 `#mount()` 重新挂载渲染的过程，
-   * // 仅仅同步修改样式为显示状态 `this.#hostElement.style.display = ""`。
-   * // 这导致新传入的 `props` 根本没有应用并渲染到界面上，仍然只显示先前挂载时的旧属性值。
+   * 如果组件当前已被挂载且处于隐藏状态，此时调用 `show(props)` 并传入了新的 props，
+   * 必须应用并重新渲染新 props，否则新传入的 props 根本不会被应用到界面上，仍然只显示旧属性值。
    * @param {Object} props - 可选的新 props
    */
   show(props) {
@@ -50,10 +47,12 @@ export default class ShadowDomManager {
       return;
     }
 
+    const useProps = props || this._props;
+
     if (!this.#hostElement) {
       this.#isProcessing = true;
       try {
-        this.#mount(props || this._props);
+        this.#mount(useProps);
       } catch (error) {
         logger.warn(`Failed to mount component with id "${this._id}":`, error);
         this.#isProcessing = false;
@@ -61,6 +60,22 @@ export default class ShadowDomManager {
       } finally {
         this.#isProcessing = false;
       }
+    } else if (props) {
+      // 组件已挂载，但传入了新的 props，必须更新并重新渲染
+      this._props = props;
+      const cache = createCache({
+        key: this._id,
+        prepend: true,
+        container: this.#hostElement.shadowRoot,
+      });
+      const ComponentToRender = this._ReactComponent;
+      this.#reactRoot.render(
+        <React.StrictMode>
+          <CacheProvider value={cache}>
+            <ComponentToRender {...{ ...this._props, onClose: this.hide.bind(this) }} />
+          </CacheProvider>
+        </React.StrictMode>
+      );
     }
 
     this.#hostElement.style.display = "";

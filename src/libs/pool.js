@@ -5,7 +5,7 @@ import { kissLog } from "./log";
  * 任务池（TaskPool）
  * 用于控制异步任务（如网络请求）的并发数、最小执行间隔和重试机制，防止请求过于密集被翻译服务封禁。
  */
-class TaskPool {
+export class TaskPool {
   #pool = []; // 待执行的任务队列
 
   #maxRetry = 2; // 最大重试次数
@@ -16,6 +16,8 @@ class TaskPool {
   #currentConcurrent = 0; // 当前正在执行的任务数
   #lastExecutionTime = 0; // 上一个任务的启动时间戳，用于计算延迟
   #schedulerTimer = null; // 用于调度下一个任务的延迟定时器
+  #retryTimers = new Set(); // 处于延迟重试阶段的定时器集合，用于 clear() 时统一终结
+  #retryTasks = new Set(); // 处于延迟重试阶段的任务对象，用于 clear() 时拒绝其 Promise，避免调用方永久挂起
 
   /**
    * 构造函数
@@ -87,11 +89,16 @@ class TaskPool {
       kissLog("task pool", err);
       // 如果发生异常且重试次数未达到上限，则安排延迟重试
       if (retry < this.#maxRetry) {
-        setTimeout(() => {
-          // 将重试的任务重新放入队列头部，以保证重试任务优先被执行
-          this.#pool.unshift({ ...task, retry: retry + 1 });
+        const retryTask = { ...task, retry: retry + 1 };
+        this.#retryTasks.add(retryTask);
+        const timer = setTimeout(() => {
+          // 定时器触发后，从跟踪集合中移除自身，再重新放入队列头部
+          this.#retryTimers.delete(timer);
+          this.#retryTasks.delete(retryTask);
+          this.#pool.unshift(retryTask);
           this.#scheduleNext();
         }, this.#retryInterval);
+        this.#retryTimers.add(timer);
       } else {
         // 达到最大重试次数后，抛出错误并拒绝 Promise
         reject(err);
@@ -134,10 +141,8 @@ class TaskPool {
 
   /**
    * 清空任务池
-   * // REVIEW: 定时器未清理风险。如果有些任务在 catch 块中，已经处于 setTimeout 延迟重试阶段（重试定时器还未触发），
-   * // 此时调用 clear()，由于这些任务还没有被放回 #pool 队列中，所以 clear() 无法将它们 reject 并清理。
-   * // 当 #retryInterval 延迟到期后，setTimeout 回调仍会触发并把任务 unshift 进 #pool，然后重新触发调度启动，
-   * // 这会导致已经被 clear 清理的请求池重新产生残留的“僵尸重试任务”继续运行。
+   * 除了拒绝队列中的任务并取消调度定时器外，还必须终结所有处于延迟重试阶段的定时器，
+   * 否则清理后重试回调仍会触发并把任务重新放回队列，产生"僵尸重试任务"。
    */
   clear() {
     // 拒绝队列中所有等待执行的任务
@@ -152,6 +157,11 @@ class TaskPool {
       clearTimeout(this.#schedulerTimer);
       this.#schedulerTimer = null;
     }
+    // 终结所有处于延迟重试阶段的定时器，杜绝僵尸任务复活
+    for (const timer of this.#retryTimers) {
+      clearTimeout(timer);
+    }
+    this.#retryTimers.clear();
   }
 }
 

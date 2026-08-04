@@ -39,8 +39,20 @@ function getGmStorage() {
   return {
     setValue: getGmMethod("setValue", "GM_setValue", [window.BRIDGE_GM]),
     getValue: getGmMethod("getValue", "GM_getValue", [window.BRIDGE_GM]),
-    deleteValue: getGmMethod("deleteValue", "GM_deleteValue", [window.BRIDGE_GM]),
+    deleteValue: getGmMethod("deleteValue", "GM_deleteValue", [
+      window.BRIDGE_GM,
+    ]),
   };
+}
+
+function getExtensionStorage() {
+  const local = browser?.storage?.local;
+  if (!browser?.runtime?.id || !local) {
+    throw new Error(
+      "Extension context invalidated: refresh the page before accessing storage"
+    );
+  }
+  return local;
 }
 
 /**
@@ -52,7 +64,7 @@ function getGmStorage() {
  */
 async function set(key, val) {
   if (isExt) {
-    await browser.storage.local.set({ [key]: val });
+    await getExtensionStorage().set({ [key]: val });
   } else if (isGm) {
     await getGmStorage().setValue(key, val);
   } else {
@@ -67,7 +79,7 @@ async function set(key, val) {
  */
 async function get(key) {
   if (isExt) {
-    const val = await browser.storage.local.get([key]);
+    const val = await getExtensionStorage().get([key]);
     return val[key];
   } else if (isGm) {
     const val = await getGmStorage().getValue(key);
@@ -82,7 +94,7 @@ async function get(key) {
  */
 async function del(key) {
   if (isExt) {
-    await browser.storage.local.remove([key]);
+    await getExtensionStorage().remove([key]);
   } else if (isGm) {
     await getGmStorage().deleteValue(key);
   } else {

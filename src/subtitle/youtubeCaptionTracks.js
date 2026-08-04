@@ -160,43 +160,57 @@ export async function getCaptionTracks(videoId) {
  * @returns {Promise<Array<object>|null>} YouTube json3 events 数组。
  */
 export async function getSubtitleEvents(capUrl, potUrl, responseText) {
+  let interceptedEvents = null;
+  try {
+    interceptedEvents = JSON.parse(responseText)?.events || null;
+  } catch (err) {
+    logger.info("Youtube Provider: parse responseText", err);
+  }
+
+  const segmentedParams = ["sq", "range", "rn", "rbuf"];
+  const isSegmentedResponse = segmentedParams.some((param) =>
+    potUrl.searchParams.has(param)
+  );
   if (
     !potUrl.searchParams.get("tlang") &&
+    !isSegmentedResponse &&
     potUrl.searchParams.get("kind") === capUrl.searchParams.get("kind") &&
     isSameLang(potUrl.searchParams.get("lang"), capUrl.searchParams.get("lang"))
   ) {
-    try {
-      const json = JSON.parse(responseText);
-      return json?.events;
-    } catch (err) {
-      logger.info("Youtube Provider: parse responseText", err);
-      return null;
-    }
+    return interceptedEvents;
   }
 
   try {
-    // REVIEW: 这里沿用原有就地修改 potUrl.searchParams 的行为。
-    // 如果 potUrl 被其他调用方共享，可能产生副作用；本次拆分不改变该行为。
-    potUrl.searchParams.delete("tlang");
-    potUrl.searchParams.delete("name");
-    potUrl.searchParams.set("lang", capUrl.searchParams.get("lang"));
-    potUrl.searchParams.set("fmt", "json3");
+    // Start from the complete caption-track URL so track signatures are kept,
+    // then merge request-only player tokens from the intercepted URL.
+    const requestUrl = new URL(capUrl.href);
+    potUrl.searchParams.forEach((value, key) => {
+      if (!requestUrl.searchParams.has(key)) {
+        requestUrl.searchParams.append(key, value);
+      }
+    });
+
+    ["tlang", "name", ...segmentedParams].forEach((param) =>
+      requestUrl.searchParams.delete(param)
+    );
+    requestUrl.searchParams.set("lang", capUrl.searchParams.get("lang"));
+    requestUrl.searchParams.set("fmt", "json3");
     if (capUrl.searchParams.get("kind")) {
-      potUrl.searchParams.set("kind", capUrl.searchParams.get("kind"));
+      requestUrl.searchParams.set("kind", capUrl.searchParams.get("kind"));
     } else {
-      potUrl.searchParams.delete("kind");
+      requestUrl.searchParams.delete("kind");
     }
 
-    const res = await fetch(potUrl.href);
+    const res = await fetch(requestUrl.href);
     if (res?.ok) {
       const json = await res.json();
-      return json?.events;
+      return json?.events || interceptedEvents;
     }
     logger.info(`Youtube Provider: Failed to fetch subtitles: ${res.status}`);
-    return null;
+    return interceptedEvents;
   } catch (error) {
     logger.info("Youtube Provider: fetching subtitles error", error);
-    return null;
+    return interceptedEvents;
   }
 }
 
@@ -249,15 +263,12 @@ export function selectProactiveCaptionTrack(captionTracks, toLang) {
 
   // 优先：与目标语言不同的手动字幕轨（非 asr 自动字幕）
   const manualDiff = pool.find(
-    (track) =>
-      track.kind !== "asr" && !isSameLang(track.languageCode, toLang)
+    (track) => track.kind !== "asr" && !isSameLang(track.languageCode, toLang)
   );
   if (manualDiff) return manualDiff;
 
   // 次选：与目标语言不同的任意字幕轨（含 asr）
-  const anyDiff = pool.find(
-    (track) => !isSameLang(track.languageCode, toLang)
-  );
+  const anyDiff = pool.find((track) => !isSameLang(track.languageCode, toLang));
   if (anyDiff) return anyDiff;
 
   // 所有字幕轨都与目标语言相同：无需翻译
