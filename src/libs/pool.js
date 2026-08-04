@@ -162,6 +162,11 @@ export class TaskPool {
       clearTimeout(timer);
     }
     this.#retryTimers.clear();
+    // 拒绝所有处于延迟重试阶段的任务，避免调用方的 Promise 永久挂起
+    for (const retryTask of this.#retryTasks) {
+      retryTask.reject("the task pool was cleared");
+    }
+    this.#retryTasks.clear();
   }
 }
 
