@@ -26,7 +26,7 @@ import Playgound from "./Playground";
 import MouseHoverSetting from "./MouseHover";
 import SubtitleSetting from "./Subtitle";
 import StylesSetting from "./StylesSetting";
-import WebTranslateSetting from "./WebTranslateSetting";
+import WebSummarySetting from "./WebSummarySetting";
 import Backdrop from "@mui/material/Backdrop";
 import CircularProgress from "@mui/material/CircularProgress";
 import { kissLog } from "../../libs/log";
@@ -185,7 +185,7 @@ export default function Options() {
                   <Route path="tranbox" element={<Tranbox />} />
                   <Route path="mousehover" element={<MouseHoverSetting />} />
                   <Route path="subtitle" element={<SubtitleSetting />} />
-                  <Route path="webtranslate" element={<WebTranslateSetting />} />
+                  <Route path="websummary" element={<WebSummarySetting />} />
                   <Route path="apis" element={<Apis />} />
                   <Route path="prompts" element={<Prompts />} />
                   <Route path="sync" element={<SyncSetting />} />

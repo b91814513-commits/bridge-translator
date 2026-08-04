@@ -37,7 +37,6 @@ import {
   readConfigFromFile,
 } from "../../libs/configExport";
 import { useAlert } from "../../hooks/Alert";
-import { useSetting } from "../../hooks/Setting";
 import { kissLog } from "../../libs/log";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
@@ -58,7 +57,6 @@ export default function SyncSetting() {
   const { sync, updateSync } = useSync();
   const alert = useAlert();
   // 数据同步过程中的 Loading 状态
-  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -73,7 +71,6 @@ export default function SyncSetting() {
   // 敏感字段默认隐藏，用户可临时切换明文查看。
   const [showSyncKey, setShowSyncKey] = useState(false);
   const [showSyncEncryptKey, setShowSyncEncryptKey] = useState(false);
-  const { reloadSetting } = useSetting();
 
   const getSyncErrorMessage = (err, fallback = i18n("sync_failed")) => {
     const rawMessage = err?.message || String(err || "");
@@ -98,22 +95,6 @@ export default function SyncSetting() {
     await updateSync({
       [name]: value,
     });
-  };
-
-  // 触发物理网络数据上传/下载同步（保留兼容）
-  const handleSyncTest = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      await uploadToCloud();
-      reloadSetting();
-      alert.success(i18n("sync_success"));
-    } catch (err) {
-      kissLog("sync all", err);
-      alert.error(getSyncErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
   };
 
   // 上传本地数据到云端

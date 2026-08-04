@@ -14,6 +14,7 @@ import {
 import {
   CURRENT_SETTINGS_VERSION,
   DEFAULT_SUBTITLE_PROMPT_SLUG,
+  DEFAULT_WEB_SUMMARY_PROMPT_SLUG,
   PROMPT_MODE_FOLLOW_API,
 } from "./prompt";
 import { DEFAULT_CUSTOM_STYLES } from "./styles";
@@ -180,6 +181,15 @@ export const DEFAULT_SUBTITLE_SETTING = {
   segPromptSlug: DEFAULT_SUBTITLE_PROMPT_SLUG, // 指定的 subtitle prompt slug，仅在指定提示词模式下生效
 };
 
+// --- 网页总结核心配置 ---
+export const DEFAULT_WEB_SUMMARY_SETTING = {
+  enabled: true, // 是否启用网页总结功能
+  apiSlug: "-", // 总结所用 AI 接口（"-" 表示自动选择第一个可用 AI 接口）
+  promptMode: PROMPT_MODE_FOLLOW_API, // 总结提示词来源：接口默认或指定网页总结提示词
+  promptSlug: DEFAULT_WEB_SUMMARY_PROMPT_SLUG, // 指定的网页总结提示词 slug，仅在指定提示词模式下生效
+  toLang: "zh-CN", // 总结目标语言
+};
+
 // 预设配置规则的在线订阅 URL 地址列表 (从服务器拉取全球主流网站的最优适配 CSS 选择器规则)
 // 未配置归属地址时过滤为空列表，即显式禁用默认规则订阅
 export const DEFAULT_SUBRULES_LIST = [
@@ -261,7 +271,9 @@ export const DEFAULT_SETTING = {
   preInit: true, // 是否在 DOMContentLoaded 之前预先加载核心拦截脚本以加快翻译响应
   transAllnow: false, // 兜底机制：无匹配规则下是否强行全页面立即翻译
   subtitleSetting: DEFAULT_SUBTITLE_SETTING, // 字幕翻译模块的具体参数设置
+  webSummarySetting: DEFAULT_WEB_SUMMARY_SETTING, // 网页总结模块的具体参数设置
   logLevel: LogLevel.INFO.value, // 扩展运行时的全局调试日志级别
   rootMargin: 500, // 滚动翻译机制触发时，段落距离屏幕视口边界的触发高度 (px)
+  webTranslateApiSlug: OPT_TRANS_MICROSOFT, // 网页翻译默认使用的翻译服务标识
   customStyles: DEFAULT_CUSTOM_STYLES, // 用于个性化译文表现的自定义 CSS 样式规则列表
 };

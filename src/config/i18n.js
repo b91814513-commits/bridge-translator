@@ -3942,6 +3942,42 @@ export const I18N = {
     ja: `ウェブ翻訳`,
     ko: `웹 번역`,
   },
+  // 网页总结设置
+  nav_web_summary: {
+    zh: `网页总结`,
+    en: `Web Summary`,
+    zh_TW: `網頁總結`,
+    ja: `ウェブ要約`,
+    ko: `웹 요약`,
+  },
+  web_summary_title: {
+    zh: `网页总结设置`,
+    en: `Web Summary Settings`,
+    zh_TW: `網頁總結設定`,
+    ja: `ウェブ要約設定`,
+    ko: `웹 요약 설정`,
+  },
+  toggle_web_summary: {
+    zh: `启用网页总结`,
+    en: `Enable Web Summary`,
+    zh_TW: `啟用網頁總結`,
+    ja: `ウェブ要約を有効にする`,
+    ko: `웹 요약 활성화`,
+  },
+  web_summary_auto_api: {
+    zh: `自动选择`,
+    en: `Auto`,
+    zh_TW: `自動選擇`,
+    ja: `自動選択`,
+    ko: `자동 선택`,
+  },
+  web_summary_prompt: {
+    zh: `总结提示词`,
+    en: `Summary Prompt`,
+    zh_TW: `總結提示詞`,
+    ja: `要約プロンプト`,
+    ko: `요약 프롬프트`,
+  },
   web_translate_title: {
     zh: `网页翻译设置`,
     en: `Web Translation Settings`,

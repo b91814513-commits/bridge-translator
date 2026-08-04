@@ -721,12 +721,17 @@ export class Translator {
   // 接口参数
   // todo: 不用频繁查找计算
   get #apiSetting() {
-    // return (
-    //   this.#setting.transApis.find(
-    //     (api) => api.apiSlug === this.#rule.apiSlug
-    //   ) || DEFAULT_API_SETTING
-    // );
-    return this.#apisMap.get(this.#rule.apiSlug) || DEFAULT_API_SETTING;
+    // 网页翻译统一使用 规则设置 → 全局规则 中配置的 apiSlug，不再读取 webTranslateApiSlug。
+    const ruleApi = this.#apisMap.get(this.#rule.apiSlug);
+    if (ruleApi) {
+      return ruleApi;
+    }
+    // 兜底使用默认服务（当前为微软），记录日志便于排查配置问题
+    kissLog(
+      "web translate api resolved to default because rule api not found. rule.apiSlug=",
+      this.#rule.apiSlug
+    );
+    return DEFAULT_API_SETTING;
   }
 
   get #transAllnow() {
@@ -1701,6 +1706,11 @@ export class Translator {
 
   // 将不同来源的异常统一转成可展示、可复制的纯文本错误信息
   #formatTranslateError(error) {
+    return this.#decorateTranslateError(this.#rawTranslateError(error));
+  }
+
+  // 提取原始错误文本
+  #rawTranslateError(error) {
     if (error instanceof Error) {
       const tag = error.name ? `[${error.name}]` : "[UnknownError]";
       const msg = error.message ? ` ${error.message}` : "";
@@ -1717,6 +1727,16 @@ export class Translator {
     } catch (_) {
       return String(error);
     }
+  }
+
+  // 在错误信息末尾追加用户可理解的中文说明，帮助定位配置问题。
+  // 当请求命中微软 Edge 翻译鉴权接口（edge.microsoft.com/translate/auth）时，
+  // 说明翻译实际使用的是微软服务而非用户配置的自定义模型，给出明确排查指引。
+  #decorateTranslateError(text) {
+    if (!text || !text.includes("edge.microsoft.com/translate/auth")) {
+      return text;
+    }
+    return `${text}\n\n提示：本次请求实际使用了「微软翻译」，但其鉴权接口（edge.microsoft.com/translate/auth）返回了错误。请检查「设置 → 网页翻译」中的默认翻译服务是否已切换到所需的自定义翻译模型，并确认该模型的 API Key 与接入地址均已正确填写并保存。`;
   }
 
   // 将文本写入剪贴板；当 Clipboard API 不可用时，回退到临时文本框复制

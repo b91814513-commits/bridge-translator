@@ -1,3 +1,25 @@
+## v1.0.1
+
+### 🐛 Bug 修复
+
+- **规则设置 & 接口优先级**：修复网页翻译接口优先级逻辑，统一以全局规则的 `apiSlug` 为准，移除旧的 `webTranslateApiSlug` 独立优先级；配置改动通过 `browser.storage.onChanged` 即时生效，无需刷新页面。
+- **Chrome 快捷键上限**：移除 `toggleStyle` 命令的默认快捷键 `Alt+C`（功能保留，可手动在 `chrome://extensions/shortcuts` 配置），使带默认快捷键的命令数量不超过 Chrome 限制的 4 个。
+- **YouTube 字幕稳定性**：字幕系统等待视频元素实际出现后再启动，避免早期初始化警告与字幕丢失。
+- **构建修复**：修复无关文件的 ESLint 报错，确保构建流水线通过。
+
+### ✨ 新增与增强
+
+- **网页总结设置页**：侧边栏新增「网页总结」独立设置页，与划词翻译、字幕翻译风格一致；可单独配置启用开关、AI 接口、自定义提示词、目标语言。
+- **网页总结快捷键**：`summarize_page` 命令默认快捷键 `Alt+W`，由 background 读取 `webSummarySetting` 配置后执行，禁用时返回提示且不调用 AI 接口。
+- **i18n**：新增网页总结相关的多语言键值。
+
+### ♻️ 架构重构
+
+- **网页翻译接口统一**：`translator.js` 的 `#apiSetting` 不再读取独立的 `webTranslateApiSlug`，统一使用规则系统 → 全局规则的 `apiSlug`，消除双重优先级带来的配置困惑。
+- **配置独立**：网页总结从「规则设置 / 原网页翻译设置」中解耦，由独立的 `webSummarySetting` 存储结构驱动，职责更清晰。
+
+---
+
 ## v1.0.0
 
 首个正式版本。本项目基于 [KISS Translator](https://github.com/fishjar/kiss-translator) v2.0.28 二次开发，在完整继承其翻译能力的基础上，新增与优化如下：

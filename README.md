@@ -6,7 +6,7 @@
 
 **一款带 AI 网页总结与 YouTube 视频总结的双语对照翻译浏览器扩展**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-ff5c8d)](https://github.com/b91814513-commits/bridge-translator/releases)
+[![Version](https://img.shields.io/badge/version-1.0.1-ff5c8d)](https://github.com/b91814513-commits/bridge-translator/releases)
 [![Based on KISS Translator](https://img.shields.io/badge/based%20on-KISS%20Translator-42b983)](https://github.com/fishjar/kiss-translator)
 [![License](https://img.shields.io/badge/license-GPL--3.0-f78c40)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Chrome%20%7C%20Edge%20%7C%20Firefox-4285F4)](#-安装)
@@ -68,13 +68,18 @@ Bridge Translator 是一个基于 Manifest V3 的 Chrome / Edge / Firefox 浏览
 <br/><i>逐句双语对照、时间戳定位，可一键下载 VTT / JSON</i>
 </div>
 
-### 🎨 全新界面：浅粉色主题 + 品牌重塑
+### 🎨 全新界面：浅粉色主题 + 品牌重塑（v1.0.1 优化）
 
-统一更名为 **Bridge Translator**，配套标志性的**粉色桥梁**图标与全套尺寸；修复并启用了浅粉色（light-pink）主题，覆盖设置页、弹窗、划词框等所有界面。
+统一更名为 **Bridge Translator**，配套标志性的**粉色桥梁**图标与全套尺寸；v1.0 起启用浅粉色（light-pink）主题，覆盖设置页、弹窗、划词框等所有界面。
+
+v1.0.1 进一步完善了设置结构：
+- 「基本设置」顶栏新增**导入 / 导出**按钮，一键迁移配置
+- 快捷键集中展示，含「总结网页 Alt+W」「页面翻译 Alt+Q」等，超出 Chrome 默认快捷键上限的命令可在 `chrome://extensions/shortcuts` 手动绑定
+- 「网页总结」独立为侧边栏菜单项，与划词翻译、字幕翻译风格统一
 
 <div align="center">
 <img src="docs/screenshots/options-settings.png" alt="设置界面" width="820" />
-<br/><i>清爽的浅粉色设置界面，快捷键（含「总结网页 Alt+W」）均可自定义</i>
+<br/><i>清爽的浅粉色基本设置页：顶栏导入导出、翻译参数、快捷键卡片、缓存与 CSP 管理一目了然</i>
 </div>
 
 ### 🔁 同步与备份优化
@@ -137,9 +142,8 @@ pnpm build:chrome      # 产物输出到 build/chrome/
 | `Alt+Q` | 开启 / 关闭页面翻译 |
 | `Alt+K` | 打开扩展弹窗 |
 | `Alt+S` | 打开划词翻译框 |
-| `Alt+C` | 切换译文样式 |
 
-> 以上快捷键均可在「基本设置」中自定义。
+> 以上为默认快捷键，均可在「基本设置」中自定义；「切换译文样式」等更多命令可前往 `chrome://extensions/shortcuts` 手动绑定。
 
 ## 🛠️ 开发
 

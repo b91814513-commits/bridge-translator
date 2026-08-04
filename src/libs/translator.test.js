@@ -8,6 +8,7 @@ jest.mock("./msg", () => ({
 
 const { apiTranslate } = require("../apis");
 const { Translator } = require("./translator");
+const { DEFAULT_API_LIST } = require("../config");
 
 const flushAsync = async () => {
   jest.runOnlyPendingTimers();
@@ -851,5 +852,64 @@ describe("Translator rule styles", () => {
     expect(
       document.querySelector(`.${Translator.KISS_CLASS.hoverBubble}`)
     ).toBeNull();
+  });
+
+  describe("web translate API selection priority (#apiSetting)", () => {
+    const geminiApi = {
+      ...DEFAULT_API_LIST.find((a) => a.apiType === "Gemini"),
+      apiSlug: "Gemini_abc",
+      apiName: "Gemini (custom)",
+    };
+    const googleApi = {
+      ...DEFAULT_API_LIST.find((a) => a.apiType === "Google"),
+      apiSlug: "Google",
+      apiName: "Google",
+    };
+
+    test("uses the global rule apiSlug for web translate (webTranslateApiSlug ignored)", async () => {
+      document.body.innerHTML =
+        '<main id="root"><p id="target">Hello world</p></main>';
+      // 默认 rule 继承 GLOBLA_RULE：pattern="*"，apiSlug="Microsoft"
+      createTranslator(
+        {},
+        { webTranslateApiSlug: "Gemini_abc", transApis: [geminiApi] }
+      );
+      await flushAsync();
+
+      expect(apiTranslate).toHaveBeenCalled();
+      const args = apiTranslate.mock.calls[0][0];
+      // 网页翻译统一使用全局规则的 apiSlug（Microsoft），忽略 webTranslateApiSlug
+      expect(args.apiSetting.apiSlug).toBe("Microsoft");
+      expect(args.apiSetting.apiType).not.toBe("Gemini");
+    });
+
+    test("falls back to DEFAULT_API_SETTING when global rule apiSlug is not found", async () => {
+      document.body.innerHTML =
+        '<main id="root"><p id="target">Hello world</p></main>';
+      // rule 的 apiSlug 不在 transApis 中，回退到默认服务
+      createTranslator(
+        { apiSlug: "Google", pattern: "*" },
+        { transApis: [] }
+      );
+      await flushAsync();
+
+      const args = apiTranslate.mock.calls[0][0];
+      // 全局规则 apiSlug 未找到时回退到默认服务（当前为微软）
+      expect(args.apiSetting.apiSlug).toBe("Microsoft");
+    });
+
+    test("uses a specific site rule apiSlug", async () => {
+      document.body.innerHTML =
+        '<main id="root"><p id="target">Hello world</p></main>';
+      // 针对特定网站配置了规则（pattern 非 *），且显式指定 Google
+      createTranslator(
+        { apiSlug: "Google", pattern: "example.com" },
+        { transApis: [googleApi, geminiApi] }
+      );
+      await flushAsync();
+
+      const args = apiTranslate.mock.calls[0][0];
+      expect(args.apiSetting.apiSlug).toBe("Google");
+    });
   });
 });

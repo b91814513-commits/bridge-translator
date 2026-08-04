@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_app_name__",
   "description": "__MSG_app_description__",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "default_locale": "en",
   "author": "Bridge Translator Team",
   "background": {
@@ -69,15 +69,15 @@
       "description": "__MSG_open_separate_window__"
     },
     "toggleStyle": {
-      "suggested_key": {
-        "default": "Alt+C"
-      },
       "description": "__MSG_toggle_style__"
     },
     "openOptions": {
       "description": "__MSG_open_options__"
     },
     "summarize_page": {
+      "suggested_key": {
+        "default": "Alt+W"
+      },
       "description": "__MSG_command_summarize_page__"
     }
   },

@@ -119,9 +119,6 @@ export function parseVideoSummaryResponse(responseText) {
     rawText: responseText,
   };
 
-  // 解析时间戳的正则：匹配 [MM:SS] 或 [HH:MM:SS] 格式
-  const timestampRegex = /\[?(\d{1,2}:\d{2}(?::\d{2})?)\]?/g;
-
   /**
    * 将时间字符串转换为毫秒
    * @param {string} timeStr 时间字符串，如 "01:23" 或 "01:23:45"
@@ -172,7 +169,7 @@ export function parseVideoSummaryResponse(responseText) {
     }
 
     // 检测新的分段标题 (### Section N: Title (Timestamp: XX:XX - XX:XX))，标签兼容中文“时间戳”写法
-    const sectionMatch = trimmedLine.match(/^###\s+(?:Section\s+\d+[:：]\s*)?(.+?)(?:\s*[\(（](?:Timestamp|时间戳)[:：]?\s*([\d:]+)\s*[-–]\s*([\d:]+)[\)）])?$/i);
+    const sectionMatch = trimmedLine.match(/^###\s+(?:Section\s+\d+[:：]\s*)?(.+?)(?:\s*[(（](?:Timestamp|时间戳)[:：]?\s*([\d:]+)\s*[-–]\s*([\d:]+)[)）])?$/i);
     if (sectionMatch) {
       inMainPoints = false;
       inHighlights = false;
