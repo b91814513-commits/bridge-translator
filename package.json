@@ -1,7 +1,7 @@
 {
   "name": "bridge-translator",
   "description": "A bilingual bridge translation extension - connect languages seamlessly",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Gabe<yugang2002@gmail.com>",
   "private": true,
   "dependencies": {
