@@ -6,11 +6,11 @@
 
 **一款带 AI 网页总结与 YouTube 视频总结的双语对照翻译浏览器扩展**
 
-[![Version](https://img.shields.io/badge/version-1.0.1-ff5c8d)](https://github.com/b91814513-commits/bridge-translator/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-ff5c8d)](https://github.com/b91814513-commits/bridge-translator/releases)
 [![Based on KISS Translator](https://img.shields.io/badge/based%20on-KISS%20Translator-42b983)](https://github.com/fishjar/kiss-translator)
 [![License](https://img.shields.io/badge/license-GPL--3.0-f78c40)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Chrome%20%7C%20Edge%20%7C%20Firefox-4285F4)](#-安装)
-[![Manifest](https://img.shields.io/badge/Manifest-V3-8957e5)]()
+[![Manifest](https://img.shields.io/badge/Manifest-V3-8957e5)](https://developer.chrome.com/docs/extensions/develop/concepts/manifest)
 
 **中文** · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
@@ -68,11 +68,34 @@ Bridge Translator 是一个基于 Manifest V3 的 Chrome / Edge / Firefox 浏览
 <br/><i>逐句双语对照、时间戳定位，可一键下载 VTT / JSON</i>
 </div>
 
-### 🎨 全新界面：浅粉色主题 + 品牌重塑（v1.0.1 优化）
+### 📚 YouTube 生词本：从字幕上下文到持久化词汇
+
+在 YouTube 字幕中悬停单词即可查词，单击单词或点击查词浮层中的书签按钮即可收藏。生词不会因为关闭页面而丢失，并会保留完整学习上下文：音标、释义、字幕原句、译文、视频标题和时间点。
+
+- 侧栏只显示当前视频的收藏，点击时间即可跳转回对应字幕；
+- 设置页支持搜索、全部词汇 / 按视频查看、删除和导出；
+- 同一单词在同一视频中自动合并，同一单词也可以归档到多个视频。
+
+<div align="center">
+<img src="docs/screenshots/youtube-vocabulary-collection.png" alt="YouTube 字幕查词与生词收藏" width="980" />
+<br/><i>在字幕中查词、收藏，并在当前视频侧栏查看上下文</i>
+</div>
+
+<div align="center">
+<img src="docs/screenshots/vocabulary-word-detail.png" alt="生词详情与字幕上下文" width="820" />
+<br/><i>展开词条即可查看释义、例句、来源视频和时间点</i>
+</div>
+
+<div align="center">
+<img src="docs/screenshots/vocabulary-by-video.png" alt="按视频管理生词" width="820" />
+<br/><i>在设置页按视频聚合管理，并保留每次收藏的来源记录</i>
+</div>
+
+### 🎨 全新界面：浅粉色主题 + 品牌重塑
 
 统一更名为 **Bridge Translator**，配套标志性的**粉色桥梁**图标与全套尺寸；v1.0 起启用浅粉色（light-pink）主题，覆盖设置页、弹窗、划词框等所有界面。
 
-v1.0.1 进一步完善了设置结构：
+设置页结构清晰、易于上手：
 - 「基本设置」顶栏新增**导入 / 导出**按钮，一键迁移配置
 - 快捷键集中展示，含「总结网页 Alt+W」「页面翻译 Alt+Q」等，超出 Chrome 默认快捷键上限的命令可在 `chrome://extensions/shortcuts` 手动绑定
 - 「网页总结」独立为侧边栏菜单项，与划词翻译、字幕翻译风格统一
@@ -112,6 +135,11 @@ v1.0.1 进一步完善了设置结构：
 
 ## 🚀 安装
 
+### 前置要求
+
+- **浏览器**：Chrome / Edge / Firefox（推荐 Chrome 或 Edge）
+- **从源码构建可选**：Node.js 18+ 与 pnpm 9.14.4
+
 ### 方式一：从 Releases 安装（推荐）
 
 1. 前往 [Releases](https://github.com/b91814513-commits/bridge-translator/releases) 下载最新的 `bridge-translator-chrome.zip`。
@@ -122,7 +150,6 @@ v1.0.1 进一步完善了设置结构：
 ### 方式二：从源码构建
 
 ```bash
-# 需要 Node.js 18+ 与 pnpm 9.14.4
 git clone https://github.com/b91814513-commits/bridge-translator.git
 cd bridge-translator
 pnpm install
@@ -144,6 +171,28 @@ pnpm build:chrome      # 产物输出到 build/chrome/
 | `Alt+S` | 打开划词翻译框 |
 
 > 以上为默认快捷键，均可在「基本设置」中自定义；「切换译文样式」等更多命令可前往 `chrome://extensions/shortcuts` 手动绑定。
+
+## 🩺 常见问题
+
+<details>
+<summary><b>网页总结 / 视频总结报错 <code>Failed to fetch</code></b></summary>
+
+通常是 AI 接口未配置或配置有误。请到扩展「**接口设置**」中填入有效的 OpenAI 兼容 / Gemini / Claude / DeepSeek 等接口的 API Key，并确认「网页总结」设置页的启用开关已打开。
+</details>
+
+<details>
+<summary><b>装了扩展但快捷键没反应</b></summary>
+
+默认快捷键可在「基本设置」中查看；若被占用或未生效，请前往 `chrome://extensions/shortcuts` 手动绑定，或在「基本设置」中重新指定。
+</details>
+
+<details>
+<summary><b>翻译 / 总结不生效，或页面毫无反应</b></summary>
+
+- 确认扩展已在 `chrome://extensions/` 中启用且版本为最新；
+- 确认目标页面不在「**禁用翻译名单**」中；
+- 若刚改过配置，重新加载目标页面让配置生效。
+</details>
 
 ## 🛠️ 开发
 
